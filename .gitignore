@@ -1,0 +1,10 @@
+/.idea/
+/.phpunit.cache/
+/docker/
+/report/
+/var/
+/vendor/
+/.php-cs-fixer.cache
+/.phpunit.result.cache
+/composer.lock
+/docker-compose.yaml

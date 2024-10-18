@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<container xmlns="http://symfony.com/schema/dic/services"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation="http://symfony.com/schema/dic/services
+        https://symfony.com/schema/dic/services/services-1.0.xsd"
+>
+    <services>
+        <service id="SharedBundle\EventHandling\MessengerAsyncEventBus">
+            <argument type="service" id="messenger.bus.event.async"/>
+        </service>
+
+        <service id="Shared\CommandHandling\CommandBusInterface" class="SharedBundle\CommandHandling\MessengerCommandBus">
+            <argument type="service" id="messenger.bus.command"/>
+        </service>
+
+        <service id="Shared\CommandHandling\QueryBusInterface" class="SharedBundle\CommandHandling\MessengerQueryBus">
+            <argument type="service" id="messenger.bus.query"/>
+        </service>
+
+        <service id="SharedBundle\EventHandling\AsyncEventPublisher">
+            <argument type="service" id="SharedBundle\EventHandling\MessengerAsyncEventBus"/>
+            <tag name="packages.shared.event_handling.event_listener"/>
+            <tag name="kernel.event_subscriber"/>
+        </service>
+
+        <service id="Shared\EventHandling\EventBusInterface" class="Shared\EventHandling\SimpleEventBus"/>
+
+        <service id="Shared\EventSourcing\EventStreamDecoratorInterface" class="Shared\EventSourcing\MetadataEnricher\MetadataEnrichingEventStreamDecorator"/>
+
+        <service id="SharedBundle\EventStore\DoctrineEventStore">
+            <argument type="service" id="doctrine.orm.default_entity_manager"/>
+        </service>
+
+        <service id="Shared\EventStore\EventStoreInterface" alias="SharedBundle\EventStore\DoctrineEventStore"/>
+
+        <service id="Shared\EventStore\EventStoreManagerInterface" alias="SharedBundle\EventStore\DoctrineEventStore"/>
+
+        <service id="SharedBundle\DBAL\DBALHealthyConnection">
+            <argument type="service" id="doctrine.dbal.default_connection"/>
+        </service>
+
+        <service id="SharedBundle\AMQP\AMQPHealthyConnection">
+            <argument>%env(MESSENGER_TRANSPORT_DSN)%</argument>
+        </service>
+
+        <service id="SharedBundle\UI\Http\Rest\EventSubscriber\ExceptionSubscriber">
+            <argument>%env(APP_DEBUG)%</argument>
+            <argument type="service" id="SharedBundle\UI\Http\Rest\Exception\ExceptionHttpStatusCodeMapping"/>
+            <tag name="kernel.event_listener" event="kernel.exception"/>
+        </service>
+
+        <service id="SharedBundle\UI\Http\Rest\EventSubscriber\JsonBodyParserSubscriber">
+            <tag name="kernel.event_listener" event="kernel.request" priority="100"/>
+        </service>
+
+        <service id="SharedBundle\UI\Http\Rest\Exception\ExceptionHttpStatusCodeMapping"/>
+    </services>
+    <when env="test">
+        <services>
+            <service id="Shared\CommandHandling\CommandBusInterface" class="SharedBundle\CommandHandling\MessengerCommandBus" public="true">
+                <argument type="service" id="messenger.bus.command"/>
+            </service>
+
+            <service id="Shared\CommandHandling\QueryBusInterface" class="SharedBundle\CommandHandling\MessengerQueryBus" public="true">
+                <argument type="service" id="messenger.bus.query"/>
+            </service>
+
+            <service id="SharedBundle\EventStore\DoctrineEventStore" public="true">
+                <argument type="service" id="doctrine.orm.default_entity_manager"/>
+            </service>
+
+            <service id="SharedBundle\DBAL\DBALHealthyConnection" public="true">
+                <argument type="service" id="doctrine.dbal.default_connection"/>
+            </service>
+
+            <service id="SharedBundle\AMQP\AMQPHealthyConnection" public="true">
+                <argument>%env(MESSENGER_TRANSPORT_DSN)%</argument>
+            </service>
+
+            <service id="SharedBundle\CommandHandling\Testing\Command\ThrowableHandler">
+                <tag name="messenger.message_handler" bus="messenger.bus.command"/>
+            </service>
+
+            <service id="SharedBundle\CommandHandling\Testing\Command\AHandler">
+                <argument type="service" id="Shared\EventHandling\EventBusInterface"/>
+                <tag name="messenger.message_handler" bus="messenger.bus.command"/>
+            </service>
+
+            <service id="SharedBundle\CommandHandling\Testing\Query\ThrowableHandler">
+                <tag name="messenger.message_handler" bus="messenger.bus.query"/>
+            </service>
+
+            <service id="SharedBundle\CommandHandling\Testing\Query\AHandler">
+                <tag name="messenger.message_handler" bus="messenger.bus.query"/>
+            </service>
+
+            <service id="SharedBundle\CommandHandling\Testing\Query\AnotherHandler">
+                <tag name="messenger.message_handler" bus="messenger.bus.query"/>
+            </service>
+        </services>
+    </when>
+</container>

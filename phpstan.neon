@@ -1,0 +1,9 @@
+includes:
+	- vendor/phpstan/phpstan-symfony/extension.neon
+parameters:
+	checkMissingIterableValueType: false
+	checkGenericClassInNonGenericObjectType: false
+	inferPrivatePropertyTypeFromConstructor: true
+	earlyTerminatingMethodCalls:
+	    SharedBundle\CommandHandling\MessengerQueryBus:
+	        - throwException

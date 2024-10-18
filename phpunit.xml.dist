@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- https://phpunit.readthedocs.io/en/latest/configuration.html -->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.5/phpunit.xsd"
+         backupGlobals="false"
+         colors="true"
+         bootstrap="vendor/autoload.php"
+         cacheDirectory=".phpunit.cache">
+  <coverage>
+    <report>
+      <html outputDirectory="report/html"/>
+    </report>
+  </coverage>
+  <php>
+    <env name="KERNEL_CLASS" value="SharedBundle\Tests\Kernel"/>
+    <env name="APP_DEBUG" value="1"/>
+    <env name="SHELL_VERBOSITY" value="-1"/>
+    <env name="SYMFONY_DEPRECATIONS_HELPER" value="disabled"/>
+    <env name="MESSENGER_TRANSPORT_DSN" value="amqp://"/>
+  </php>
+  <testsuites>
+    <testsuite name="Project Test Suite">
+      <directory>./tests/</directory>
+    </testsuite>
+  </testsuites>
+  <source>
+    <include>
+      <directory>./src/</directory>
+    </include>
+  </source>
+</phpunit>
