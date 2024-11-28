@@ -1,0 +1,42 @@
+{
+    "name": "gilsegura/shared-bundle",
+    "description": "This is a bundle integrating the [shared](https://github.com/gilsegura/shared) library into Symfony applications.",
+    "type": "symfony-bundle",
+    "license": "MIT",
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "require": {
+        "php": ">=8.3",
+        "doctrine/doctrine-bundle": "^2.13",
+        "doctrine/orm": "^3.3",
+        "gilsegura/assert": "dev-main",
+        "gilsegura/serializer": "dev-main",
+        "gilsegura/shared": "dev-main",
+        "symfony/amqp-messenger": "^7.1",
+        "symfony/console": "^7.1",
+        "symfony/framework-bundle": "^7.1",
+        "symfony/messenger": "^7.1"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3",
+        "matthiasnoback/symfony-dependency-injection-test": "^6",
+        "phpstan/phpstan": "^1",
+        "phpstan/phpstan-symfony": "^1",
+        "phpunit/phpunit": "^11",
+        "rector/rector": "^1"
+    },
+    "autoload": {
+        "psr-4": {
+            "SharedBundle\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "SharedBundle\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    }
+}

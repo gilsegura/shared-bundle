@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<container xmlns="http://symfony.com/schema/dic/services"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation="http://symfony.com/schema/dic/services
+        https://symfony.com/schema/dic/services/services-1.0.xsd"
+>
+    <services>
+        <service id="SharedBundle\CommandHandling\MessengerCommandBus">
+            <argument type="service" id="messenger.bus.command"/>
+        </service>
+
+        <service id="Shared\CommandHandling\CommandBusInterface" alias="SharedBundle\CommandHandling\MessengerCommandBus"/>
+
+        <service id="SharedBundle\CommandHandling\MessengerQueryBus">
+            <argument type="service" id="messenger.bus.query"/>
+        </service>
+
+        <service id="Shared\CommandHandling\QueryBusInterface" alias="SharedBundle\CommandHandling\MessengerQueryBus"/>
+
+        <service id="SharedBundle\EventHandling\EventPublisher">
+            <argument type="service" id="messenger.bus.event.async"/>
+            <tag name="kernel.event_subscriber"/>
+            <tag name="packages.shared.event_handling.event_listener"/>
+        </service>
+
+        <service id="SharedBundle\DBAL\DBALHealthyConnection">
+            <argument type="service" id="doctrine.dbal.default_connection"/>
+        </service>
+
+        <service id="SharedBundle\AMQP\AMQPHealthyConnection">
+            <argument>%env(MESSENGER_TRANSPORT_DSN)%</argument>
+        </service>
+
+        <service id="Shared\EventHandling\SimpleEventBus"/>
+
+        <service id="Shared\EventHandling\EventBusInterface" alias="Shared\EventHandling\SimpleEventBus"/>
+
+        <service id="Shared\EventSourcing\MetadataEnricher\MetadataEnrichingEventStreamDecorator"/>
+
+        <service id="Shared\EventSourcing\EventStreamDecoratorInterface" alias="Shared\EventSourcing\MetadataEnricher\MetadataEnrichingEventStreamDecorator"/>
+
+        <service id="SharedBundle\EventStore\DoctrineEventStore">
+            <argument type="service" id="doctrine.orm.default_entity_manager"/>
+        </service>
+
+        <service id="Shared\EventStore\EventStoreInterface" alias="SharedBundle\EventStore\DoctrineEventStore"/>
+
+        <service id="Shared\EventStore\EventStoreManagerInterface" alias="SharedBundle\EventStore\DoctrineEventStore"/>
+    </services>
+</container>

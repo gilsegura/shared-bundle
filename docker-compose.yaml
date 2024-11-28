@@ -1,0 +1,7 @@
+services:
+  php-cli:
+    build: docker/php-cli
+    volumes:
+      - ./:/var/www:rw,delegated
+    environment:
+      - XDEBUG_MODE=off

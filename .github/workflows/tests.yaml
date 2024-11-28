@@ -1,0 +1,44 @@
+name: 'tests'
+
+on:
+  push:
+    branches:
+      - 'main'
+    tags:
+      - '*'
+
+jobs:
+  tests:
+    name: 'tests'
+    runs-on: 'ubuntu-22.04'
+    steps:
+      - name: 'checkout'
+        uses: 'actions/checkout@v4'
+
+      - name: 'build the environment'
+        uses: 'shivammathur/setup-php@v2'
+        with:
+          php-version: '8.3'
+          coverage: 'xdebug'
+        env:
+          fail-fast: true
+
+      - name: 'composer validate'
+        run: 'composer validate --strict --no-interaction --ansi'
+
+      - name: 'composer install'
+        uses: 'ramsey/composer-install@v3'
+
+      - name: 'run tests'
+        run: 'vendor/bin/phpunit --testdox --exclude-group=none --colors=always --log-junit junit.xml --coverage-clover=coverage.xml'
+
+      - name: 'upload test results'
+        if: ${{ !cancelled() }}
+        uses: 'codecov/test-results-action@v1'
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: 'upload code coverage'
+        uses: 'codecov/codecov-action@v5'
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
