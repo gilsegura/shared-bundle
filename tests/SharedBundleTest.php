@@ -10,7 +10,6 @@ use Shared\EventHandling\EventBusInterface;
 use Shared\EventHandling\SimpleEventBus;
 use Shared\EventStore\EventStoreInterface;
 use Shared\EventStore\EventStoreManagerInterface;
-use SharedBundle\AMQP\AMQPHealthyConnection;
 use SharedBundle\CommandHandling\MessengerCommandBus;
 use SharedBundle\CommandHandling\MessengerQueryBus;
 use SharedBundle\DBAL\DBALHealthyConnection;
@@ -56,6 +55,5 @@ final class SharedBundleTest extends KernelTestCase
 
         self::assertInstanceOf(EventPublisher::class, $container->get(EventPublisher::class));
         self::assertInstanceOf(DBALHealthyConnection::class, $container->get(DBALHealthyConnection::class));
-        self::assertInstanceOf(AMQPHealthyConnection::class, $container->get(AMQPHealthyConnection::class));
     }
 }

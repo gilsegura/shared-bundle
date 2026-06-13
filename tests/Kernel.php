@@ -7,7 +7,6 @@ namespace SharedBundle\Tests;
 use Doctrine\Bundle\DoctrineBundle\DoctrineBundle;
 use Shared\EventHandling\SimpleEventBus;
 use Shared\EventSourcing\MetadataEnricher\MetadataEnrichingEventStreamDecorator;
-use SharedBundle\AMQP\AMQPHealthyConnection;
 use SharedBundle\CommandHandling\MessengerCommandBus;
 use SharedBundle\CommandHandling\MessengerQueryBus;
 use SharedBundle\DBAL\DBALHealthyConnection;
@@ -47,7 +46,6 @@ final class Kernel extends BaseKernel implements CompilerPassInterface
 
         $container->findDefinition(DoctrineEventStore::class)->setPublic(true);
         $container->findDefinition(DBALHealthyConnection::class)->setPublic(true);
-        $container->findDefinition(AMQPHealthyConnection::class)->setPublic(true);
     }
 
     public function registerContainerConfiguration(LoaderInterface $loader): void

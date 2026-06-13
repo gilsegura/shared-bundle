@@ -11,7 +11,6 @@ use SharedBundle\CommandHandling\UnwrapsHandlerFailureTrait;
 use Symfony\Component\Console\ConsoleEvents;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\KernelEvents;
-use Symfony\Component\Messenger\Bridge\Amqp\Transport\AmqpStamp;
 use Symfony\Component\Messenger\Event\WorkerStoppedEvent;
 use Symfony\Component\Messenger\Exception\HandlerFailedException;
 use Symfony\Component\Messenger\Exception\NoHandlerForMessageException;
@@ -48,9 +47,7 @@ final class EventPublisher implements EventSubscriberInterface, EventListenerInt
             $message = array_shift($this->messages);
 
             try {
-                $this->messageBus->dispatch($message, [
-                    new AmqpStamp($message->type),
-                ]);
+                $this->messageBus->dispatch($message);
             } catch (NoHandlerForMessageException) {
                 // An asynchronous event with no subscribers is not an error.
             } catch (HandlerFailedException $e) {

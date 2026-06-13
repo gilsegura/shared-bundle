@@ -12,7 +12,6 @@ use Shared\EventSourcing\EventStreamDecoratorInterface;
 use Shared\EventSourcing\MetadataEnricher\MetadataEnrichingEventStreamDecorator;
 use Shared\EventStore\EventStoreInterface;
 use Shared\EventStore\EventStoreManagerInterface;
-use SharedBundle\AMQP\AMQPHealthyConnection;
 use SharedBundle\CommandHandling\MessengerCommandBus;
 use SharedBundle\CommandHandling\MessengerQueryBus;
 use SharedBundle\DBAL\DBALHealthyConnection;
@@ -47,9 +46,6 @@ return static function (ContainerConfigurator $container): void {
     // HEALTH CHECKS
     $services->set(DBALHealthyConnection::class)
         ->args([service('doctrine.dbal.default_connection')]);
-
-    $services->set(AMQPHealthyConnection::class)
-        ->args(['%env(string:MESSENGER_TRANSPORT_DSN)%']);
 
     // DOMAIN
     $services->set(SimpleEventBus::class);

@@ -11,8 +11,7 @@ CQRS and Event Sourcing component.
 The bundle wires the framework-agnostic building blocks of `gilsegura/shared`
 into a Symfony application: a Doctrine-backed event store and object managers,
 custom DBAL types for the domain value objects, Messenger-based command and
-query buses, a lifecycle-aware event publisher, and health checks for the
-database and message broker.
+query buses, a lifecycle-aware event publisher, and a database health check.
 
 ## Features
 
@@ -24,7 +23,8 @@ database and message broker.
 * Messenger-based command and query buses
 * Lifecycle-aware event publisher with graceful worker shutdown
 * Automatic registration of event listeners on the event bus
-* Database and AMQP health checks
+* Database health check
+* Transport-agnostic: route events to any Messenger transport you configure
 * Semantic exceptions aligned with `gilsegura/shared`
 
 ## Installation
@@ -127,6 +127,25 @@ lose buffered events.
 `UnwrapDomainMessageMiddleware` is a Messenger middleware that unwraps a received
 `DomainMessage` envelope so listeners receive the domain message directly.
 
+### Routing events to a transport
+
+The publisher dispatches each `DomainMessage` to the event bus without binding
+it to any specific transport, so the choice of transport is yours. Route the
+domain message to a transport in your Messenger configuration:
+
+```yaml
+framework:
+    messenger:
+        transports:
+            async: '%env(MESSENGER_TRANSPORT_DSN)%'
+
+        routing:
+            'Shared\Domain\DomainMessage': async
+```
+
+The transport DSN can be AMQP, Doctrine, Redis or any other Messenger
+transport — the bundle does not require or assume any of them.
+
 ## Event listener registration
 
 `EventBusSubscriberPass` is a compiler pass that discovers every service tagged
@@ -141,15 +160,11 @@ Doctrine `Collections\Criteria`, used by the object managers for filtering,
 ordering and pagination. Unsupported expressions raise a
 `CriteriaConverterException`.
 
-## Health checks
+## Health check
 
-The bundle ships two invokable health checks suitable for readiness probes:
-
-* `DBALHealthyConnection` — verifies the Doctrine DBAL connection is reachable.
-* `AMQPHealthyConnection` — verifies the AMQP broker connection is reachable.
-
-Each returns a boolean and can be wired into a health endpoint or a console
-command.
+`DBALHealthyConnection` is an invokable health check that verifies the Doctrine
+DBAL connection is reachable. It returns a boolean and can be wired into a
+health endpoint or a console command for readiness probes.
 
 ## Requirements
 

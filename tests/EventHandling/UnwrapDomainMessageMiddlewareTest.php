@@ -10,12 +10,12 @@ use Shared\Domain\Metadata;
 use Shared\Domain\Uuid;
 use SharedBundle\EventHandling\UnwrapDomainMessageMiddleware;
 use SharedBundle\Tests\CommandHandling\EventWasOccurred;
-use Symfony\Component\Messenger\Bridge\Amqp\Transport\AmqpStamp;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
 use Symfony\Component\Messenger\Middleware\StackInterface;
 use Symfony\Component\Messenger\Stamp\BusNameStamp;
 use Symfony\Component\Messenger\Stamp\ReceivedStamp;
+use Symfony\Component\Messenger\Stamp\TransportMessageIdStamp;
 
 final class UnwrapDomainMessageMiddlewareTest extends TestCase
 {
@@ -51,7 +51,7 @@ final class UnwrapDomainMessageMiddlewareTest extends TestCase
             [
                 new ReceivedStamp('async'),
                 new BusNameStamp('messenger.bus.event.async'),
-                new AmqpStamp('routing.key'),
+                new TransportMessageIdStamp('message-id'),
             ]
         );
 
@@ -59,7 +59,7 @@ final class UnwrapDomainMessageMiddlewareTest extends TestCase
 
         self::assertNotNull($handled->last(ReceivedStamp::class));
         self::assertNotNull($handled->last(BusNameStamp::class));
-        self::assertNotNull($handled->last(AmqpStamp::class));
+        self::assertNotNull($handled->last(TransportMessageIdStamp::class));
     }
 
     private function domainMessage(EventWasOccurred $payload): DomainMessage

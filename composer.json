@@ -27,7 +27,6 @@
         "phpstan/phpstan-strict-rules": "^2.0",
         "phpunit/phpunit": "^13.1",
         "rector/rector": "^2.4",
-        "symfony/amqp-messenger": "^8.1",
         "symfony/error-handler": "^8.1",
         "symfony/framework-bundle": "^8.1",
         "symfony/http-foundation": "^8.1",
