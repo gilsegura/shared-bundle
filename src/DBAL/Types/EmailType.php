@@ -35,7 +35,7 @@ final class EmailType extends Type
         }
 
         try {
-            return (new Email($value))->email;
+            return new Email($value)->email;
         } catch (\Throwable $e) {
             throw InvalidType::new($value, self::class, ['null', self::class], $e);
         }

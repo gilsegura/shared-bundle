@@ -1,12 +1,19 @@
-/.github/                       export-ignore
-/docker/                        export-ignore
-/tests/                         export-ignore
-/.gitattributes                 export-ignore
-/.gitignore                     export-ignore
-/.php-cs-fixer.php              export-ignore
-/composer.lock                  export-ignore
-/docker-compose.yaml            export-ignore
-/Makefile                       export-ignore
-/phpstan.neon                   export-ignore
-/phpunit.xml.dist               export-ignore
-/rector.php                     export-ignore
+# Source control exclusions for Composer exports
+
+/.github/ export-ignore
+/docker/ export-ignore
+/tests/ export-ignore
+
+/.php-cs-fixer.php export-ignore
+/phpstan.neon export-ignore
+/phpunit.xml.dist export-ignore
+/rector.php export-ignore
+
+/docker-compose.yaml export-ignore
+/Makefile export-ignore
+
+/composer.lock export-ignore
+
+# Never export metadata for packaging
+/.gitattributes export-ignore
+/.gitignore export-ignore

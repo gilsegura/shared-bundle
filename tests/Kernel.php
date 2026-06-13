@@ -28,7 +28,6 @@ final class Kernel extends BaseKernel implements CompilerPassInterface
 {
     use MicroKernelTrait;
 
-    #[\Override]
     public function registerBundles(): iterable
     {
         return [
@@ -38,42 +37,22 @@ final class Kernel extends BaseKernel implements CompilerPassInterface
         ];
     }
 
-    #[\Override]
     public function process(ContainerBuilder $container): void
     {
-        $container
-            ->getDefinition(MessengerCommandBus::class)
-            ->setPublic(true);
+        $container->findDefinition(MessengerCommandBus::class)->setPublic(true);
+        $container->findDefinition(MessengerQueryBus::class)->setPublic(true);
 
-        $container
-            ->getDefinition(MessengerQueryBus::class)
-            ->setPublic(true);
+        $container->findDefinition(SimpleEventBus::class)->setPublic(true);
+        $container->findDefinition(MetadataEnrichingEventStreamDecorator::class)->setPublic(true);
 
-        $container
-            ->getDefinition(SimpleEventBus::class)
-            ->setPublic(true);
-
-        $container
-            ->getDefinition(MetadataEnrichingEventStreamDecorator::class)
-            ->setPublic(true);
-
-        $container
-            ->getDefinition(DoctrineEventStore::class)
-            ->setPublic(true);
-
-        $container
-            ->getDefinition(DBALHealthyConnection::class)
-            ->setPublic(true);
-
-        $container
-            ->getDefinition(AMQPHealthyConnection::class)
-            ->setPublic(true);
+        $container->findDefinition(DoctrineEventStore::class)->setPublic(true);
+        $container->findDefinition(DBALHealthyConnection::class)->setPublic(true);
+        $container->findDefinition(AMQPHealthyConnection::class)->setPublic(true);
     }
 
-    #[\Override]
     public function registerContainerConfiguration(LoaderInterface $loader): void
     {
-        $loader->load(static function (ContainerBuilder $container) {
+        $loader->load(static function (ContainerBuilder $container): void {
             $container->loadFromExtension('doctrine', [
                 'dbal' => [
                     'driver' => 'pdo_sqlite',
@@ -81,7 +60,6 @@ final class Kernel extends BaseKernel implements CompilerPassInterface
                     'url' => 'sqlite:///:memory:',
                 ],
                 'orm' => [
-                    'auto_generate_proxy_classes' => true,
                     'auto_mapping' => true,
                     'naming_strategy' => 'doctrine.orm.naming_strategy.underscore_number_aware',
                 ],
@@ -89,9 +67,11 @@ final class Kernel extends BaseKernel implements CompilerPassInterface
 
             $container->loadFromExtension('framework', [
                 'secret' => 'nope',
-                'test' => null,
+                'test' => true,
                 'http_method_override' => true,
-                'php_errors' => ['log' => true],
+                'php_errors' => [
+                    'log' => true,
+                ],
             ]);
 
             $container
@@ -117,13 +97,6 @@ final class Kernel extends BaseKernel implements CompilerPassInterface
                 ->setAutoconfigured(true)
                 ->setAutowired(true)
                 ->addTag('messenger.message_handler', ['bus' => 'messenger.bus.query']);
-
-            if (!$container->hasDefinition('kernel')) {
-                $container
-                    ->register('kernel', self::class)
-                    ->setSynthetic(true)
-                    ->setPublic(true);
-            }
         });
     }
 }

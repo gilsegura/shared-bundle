@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SharedBundle\Tests\EventStore;
 
+use Serializer\SerializableInterface;
 use Shared\Criteria;
 use Shared\Domain\DomainEventInterface;
 use Shared\Domain\DomainEventStream;
@@ -29,6 +30,10 @@ final class DoctrineEventStoreTest extends KernelTestCase
         $kernel = self::bootKernel();
 
         $application = new Application($kernel);
+
+        $application->get('doctrine:schema:drop')
+            ->run(new ArrayInput(['--force' => true, '--full-database' => true]), new NullOutput());
+
         $application->get('doctrine:schema:create')
             ->run(new ArrayInput([]), new NullOutput());
     }
@@ -142,10 +147,13 @@ final class DoctrineEventStoreTest extends KernelTestCase
     }
 }
 
-final readonly class EventStoredWasOccurred implements DomainEventInterface
+/**
+ * @implements SerializableInterface<array{}>
+ */
+final readonly class EventStoredWasOccurred implements DomainEventInterface, SerializableInterface
 {
     #[\Override]
-    public static function deserialize(array $data): self
+    public static function deserialize(array $attributes): static
     {
         return new self();
     }

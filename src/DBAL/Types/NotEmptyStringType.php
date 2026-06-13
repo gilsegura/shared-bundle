@@ -35,7 +35,7 @@ final class NotEmptyStringType extends Type
         }
 
         try {
-            return (new NotEmptyString($value))->string;
+            return new NotEmptyString($value)->string;
         } catch (\Throwable $e) {
             throw InvalidType::new($value, self::class, ['null', self::class], $e);
         }

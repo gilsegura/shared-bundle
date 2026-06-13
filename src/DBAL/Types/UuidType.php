@@ -35,7 +35,7 @@ final class UuidType extends Type
         }
 
         try {
-            return (new Uuid($value))->uuid;
+            return new Uuid($value)->uuid;
         } catch (\Throwable $e) {
             throw InvalidType::new($value, self::class, ['null', self::class], $e);
         }

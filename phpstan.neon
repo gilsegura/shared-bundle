@@ -1,5 +1,18 @@
 includes:
-	- vendor/phpstan/phpstan-symfony/extension.neon
+    - vendor/phpstan/phpstan-strict-rules/rules.neon
+
 parameters:
-        ignoreErrors:
-                - identifier: missingType.iterableValue
+    level: max
+
+    paths:
+        - src
+        - tests
+
+    phpVersion: 80500
+
+    tmpDir: var/phpstan
+
+    bootstrapFiles:
+        - vendor/autoload.php
+
+    reportUnmatchedIgnoredErrors: true

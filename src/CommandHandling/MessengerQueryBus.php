@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace SharedBundle\CommandHandling;
 
-use ProxyAssert\Assertion;
-use Serializer\SerializableInterface;
 use Shared\CommandHandling\QueryBusInterface;
 use Shared\CommandHandling\QueryInterface;
 use Symfony\Component\Messenger\Exception\HandlerFailedException;
@@ -14,35 +12,36 @@ use Symfony\Component\Messenger\Stamp\HandledStamp;
 
 final readonly class MessengerQueryBus implements QueryBusInterface
 {
+    use UnwrapsHandlerFailureTrait;
+
     public function __construct(
         private MessageBusInterface $messageBus,
     ) {
     }
 
+    /**
+     * @template TResult
+     *
+     * @param QueryInterface<TResult> $query
+     *
+     * @return TResult
+     */
     #[\Override]
-    public function __invoke(QueryInterface $query): SerializableInterface
+    public function __invoke(QueryInterface $query): mixed
     {
         try {
             $envelope = $this->messageBus->dispatch($query);
 
-            /** @var HandledStamp $stamp */
             $stamp = $envelope->last(HandledStamp::class);
 
-            $result = $stamp->getResult();
-
-            Assertion::isInstanceOf($result, SerializableInterface::class);
-
-            return $result;
-        } catch (HandlerFailedException $e) {
-            while ($e instanceof HandlerFailedException) {
-                $e = $e->getPrevious();
-            }
-
-            if (!$e instanceof \Throwable) {
+            if (!$stamp instanceof HandledStamp) {
                 throw new MessengerBusException();
             }
 
-            throw $e;
+            /* @var TResult */
+            return $stamp->getResult();
+        } catch (HandlerFailedException $e) {
+            $this->unwrap($e);
         } catch (\Throwable $e) {
             throw MessengerBusException::throwable($e);
         }

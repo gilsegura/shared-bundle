@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace SharedBundle\Tests\CommandHandling;
 
-use Serializer\SerializableInterface;
 use Shared\CommandHandling\CommandBusInterface;
 use Shared\CommandHandling\CommandInterface;
 use Shared\CommandHandling\QueryBusInterface;
 use Shared\CommandHandling\QueryInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\TerminateEvent;
@@ -30,23 +29,34 @@ abstract class AbstractApplicationTestCase extends KernelTestCase
 
         self::bootKernel();
 
-        /** @var CommandBusInterface|null $commandBus */
+        /** @var CommandBusInterface $commandBus */
         $commandBus = self::getContainer()->get(CommandBusInterface::class);
         $this->commandBus = $commandBus;
 
-        /** @var QueryBusInterface|null $queryBus */
+        /** @var QueryBusInterface $queryBus */
         $queryBus = self::getContainer()->get(QueryBusInterface::class);
         $this->queryBus = $queryBus;
     }
 
     final public function handle(CommandInterface $command): void
     {
-        $this->commandBus?->__invoke($command);
+        assert($this->commandBus instanceof CommandBusInterface);
+
+        $this->commandBus->__invoke($command);
     }
 
-    final public function ask(QueryInterface $query): ?SerializableInterface
+    /**
+     * @template TResult
+     *
+     * @param QueryInterface<TResult> $query
+     *
+     * @return TResult
+     */
+    final public function ask(QueryInterface $query): mixed
     {
-        return $this->queryBus?->__invoke($query);
+        assert($this->queryBus instanceof QueryBusInterface);
+
+        return $this->queryBus->__invoke($query);
     }
 
     final public function fireTerminateEvents(): void
@@ -60,8 +70,9 @@ abstract class AbstractApplicationTestCase extends KernelTestCase
             $kernel = self::bootKernel();
         }
 
-        /** @var EventDispatcher $dispatcher */
         $dispatcher = self::getContainer()->get('event_dispatcher');
+
+        assert($dispatcher instanceof EventDispatcherInterface);
 
         $dispatcher->dispatch(
             new TerminateEvent(

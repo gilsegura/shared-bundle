@@ -35,7 +35,10 @@ final class SerializableType extends Type
         }
 
         try {
-            return json_encode(Serializer::serialize($value), JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION);
+            /** @phpstan-ignore argument.templateType */
+            $serialized = Serializer::serialize($value);
+
+            return json_encode($serialized, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION);
         } catch (\Throwable $e) {
             throw SerializationFailed::new($value, self::NAME, $e->getMessage(), $e);
         }
@@ -60,7 +63,10 @@ final class SerializableType extends Type
                 throw InvalidFormat::new(\get_debug_type($value), self::class, self::NAME);
             }
 
-            return Serializer::deserialize($serializedObject);
+            /** @var array{class: class-string<SerializableInterface<array<array-key, mixed>>>, attributes: array<array-key, mixed>} $decoded */
+            $decoded = $serializedObject;
+
+            return Serializer::deserialize($decoded);
         } catch (\Throwable $e) {
             throw ValueNotConvertible::new(\get_debug_type($value), self::NAME, $e->getMessage(), $e);
         }

@@ -46,7 +46,7 @@ final class EmailTypeTest extends TestCase
     {
         self::expectException(InvalidType::class);
 
-        (new EmailType())->convertToDatabaseValue(1, $platform);
+        new EmailType()->convertToDatabaseValue(1, $platform);
     }
 
     #[DataProvider('platformProvider')]
@@ -54,7 +54,7 @@ final class EmailTypeTest extends TestCase
     {
         self::expectException(InvalidType::class);
 
-        (new EmailType())->convertToDatabaseValue('1', $platform);
+        new EmailType()->convertToDatabaseValue('1', $platform);
     }
 
     #[DataProvider('platformProvider')]
@@ -62,7 +62,7 @@ final class EmailTypeTest extends TestCase
     {
         self::expectException(InvalidFormat::class);
 
-        (new EmailType())->convertToPHPValue(1, $platform);
+        new EmailType()->convertToPHPValue(1, $platform);
     }
 
     #[DataProvider('platformProvider')]
@@ -70,13 +70,13 @@ final class EmailTypeTest extends TestCase
     {
         self::expectException(InvalidFormat::class);
 
-        (new EmailType())->convertToPHPValue('1', $platform);
+        new EmailType()->convertToPHPValue('1', $platform);
     }
 
     #[DataProvider('platformProvider')]
     public function test_must_convert_to_platform(AbstractPlatform $platform): void
     {
-        $type = (new EmailType())->convertToDatabaseValue(new Email('some@email.com'), $platform);
+        $type = new EmailType()->convertToDatabaseValue(new Email('some@email.com'), $platform);
 
         self::assertIsString($type);
     }
@@ -84,7 +84,7 @@ final class EmailTypeTest extends TestCase
     #[DataProvider('platformProvider')]
     public function test_must_convert_to_php(AbstractPlatform $platform): void
     {
-        $type = (new EmailType())->convertToPHPValue('some@email.com', $platform);
+        $type = new EmailType()->convertToPHPValue('some@email.com', $platform);
 
         self::assertInstanceOf(Email::class, $type);
     }

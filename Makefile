@@ -10,7 +10,7 @@ composer: ## composer
 
 .PHONY: coding-standards
 coding-standards: ## phpstan
-	$(COMPOSE) run --build --rm php-cli sh -lc "./vendor/bin/phpstan analyse -l 9 src tests"
+	$(COMPOSE) run --build --rm php-cli sh -lc "./vendor/bin/phpstan analyse --memory-limit=1G"
 
 .PHONY: static-analysis
 static-analysis:rector cs ## rector and cs

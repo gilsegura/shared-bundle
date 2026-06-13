@@ -11,6 +11,8 @@ use Symfony\Component\Messenger\MessageBusInterface;
 
 final readonly class MessengerCommandBus implements CommandBusInterface
 {
+    use UnwrapsHandlerFailureTrait;
+
     public function __construct(
         private MessageBusInterface $messageBus,
     ) {
@@ -22,15 +24,7 @@ final readonly class MessengerCommandBus implements CommandBusInterface
         try {
             $this->messageBus->dispatch($command);
         } catch (HandlerFailedException $e) {
-            while ($e instanceof HandlerFailedException) {
-                $e = $e->getPrevious();
-            }
-
-            if (!$e instanceof \Throwable) {
-                throw new MessengerBusException();
-            }
-
-            throw $e;
+            $this->unwrap($e);
         } catch (\Throwable $e) {
             throw MessengerBusException::throwable($e);
         }

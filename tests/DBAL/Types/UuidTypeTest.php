@@ -46,7 +46,7 @@ final class UuidTypeTest extends TestCase
     {
         self::expectException(InvalidType::class);
 
-        (new UuidType())->convertToDatabaseValue(1, $platform);
+        new UuidType()->convertToDatabaseValue(1, $platform);
     }
 
     #[DataProvider('platformProvider')]
@@ -54,7 +54,7 @@ final class UuidTypeTest extends TestCase
     {
         self::expectException(InvalidType::class);
 
-        (new UuidType())->convertToDatabaseValue('1', $platform);
+        new UuidType()->convertToDatabaseValue('1', $platform);
     }
 
     #[DataProvider('platformProvider')]
@@ -62,7 +62,7 @@ final class UuidTypeTest extends TestCase
     {
         self::expectException(InvalidFormat::class);
 
-        (new UuidType())->convertToPHPValue(1, $platform);
+        new UuidType()->convertToPHPValue(1, $platform);
     }
 
     #[DataProvider('platformProvider')]
@@ -70,13 +70,13 @@ final class UuidTypeTest extends TestCase
     {
         self::expectException(InvalidFormat::class);
 
-        (new UuidType())->convertToPHPValue('1', $platform);
+        new UuidType()->convertToPHPValue('1', $platform);
     }
 
     #[DataProvider('platformProvider')]
     public function test_must_convert_to_platform(AbstractPlatform $platform): void
     {
-        $type = (new UuidType())->convertToDatabaseValue(new Uuid('9db0db88-3e44-4d2b-b46f-9ca547de06ac'), $platform);
+        $type = new UuidType()->convertToDatabaseValue(new Uuid('9db0db88-3e44-4d2b-b46f-9ca547de06ac'), $platform);
 
         self::assertIsString($type);
     }
@@ -84,7 +84,7 @@ final class UuidTypeTest extends TestCase
     #[DataProvider('platformProvider')]
     public function test_must_convert_to_php(AbstractPlatform $platform): void
     {
-        $type = (new UuidType())->convertToPHPValue('9db0db88-3e44-4d2b-b46f-9ca547de06ac', $platform);
+        $type = new UuidType()->convertToPHPValue('9db0db88-3e44-4d2b-b46f-9ca547de06ac', $platform);
 
         self::assertInstanceOf(Uuid::class, $type);
     }

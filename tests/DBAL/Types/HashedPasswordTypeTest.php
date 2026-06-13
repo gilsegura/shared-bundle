@@ -46,7 +46,7 @@ final class HashedPasswordTypeTest extends TestCase
     {
         self::expectException(InvalidType::class);
 
-        (new HashedPasswordType())->convertToDatabaseValue(1, $platform);
+        new HashedPasswordType()->convertToDatabaseValue(1, $platform);
     }
 
     #[DataProvider('platformProvider')]
@@ -54,13 +54,13 @@ final class HashedPasswordTypeTest extends TestCase
     {
         self::expectException(InvalidFormat::class);
 
-        (new HashedPasswordType())->convertToPHPValue(1, $platform);
+        new HashedPasswordType()->convertToPHPValue(1, $platform);
     }
 
     #[DataProvider('platformProvider')]
     public function test_must_convert_to_platform(AbstractPlatform $platform): void
     {
-        $type = (new HashedPasswordType())->convertToDatabaseValue(HashedPassword::encode('password'), $platform);
+        $type = new HashedPasswordType()->convertToDatabaseValue(HashedPassword::encode('password'), $platform);
 
         self::assertIsString($type);
     }
@@ -68,7 +68,7 @@ final class HashedPasswordTypeTest extends TestCase
     #[DataProvider('platformProvider')]
     public function test_must_convert_to_php(AbstractPlatform $platform): void
     {
-        $type = (new HashedPasswordType())->convertToPHPValue('plain_password', $platform);
+        $type = new HashedPasswordType()->convertToPHPValue('plain_password', $platform);
 
         self::assertInstanceOf(HashedPassword::class, $type);
     }

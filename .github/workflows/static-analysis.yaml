@@ -18,7 +18,7 @@ jobs:
       - name: 'build the environment'
         uses: 'shivammathur/setup-php@v2'
         with:
-          php-version: '8.3'
+          php-version: '8.5'
           coverage: 'xdebug'
         env:
           fail-fast: true
@@ -27,4 +27,4 @@ jobs:
         uses: 'ramsey/composer-install@v3'
 
       - name: 'run phpstan'
-        run: 'vendor/bin/phpstan analyse --level=9 src tests'
+        run: 'vendor/bin/phpstan analyse'

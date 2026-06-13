@@ -35,7 +35,7 @@ final class HashedPasswordType extends Type
         }
 
         try {
-            return (new HashedPassword($value))->password;
+            return new HashedPassword($value)->password;
         } catch (\Throwable $e) {
             throw InvalidType::new($value, self::class, ['null', self::class], $e);
         }

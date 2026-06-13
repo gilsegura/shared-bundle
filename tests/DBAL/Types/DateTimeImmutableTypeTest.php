@@ -45,7 +45,7 @@ final class DateTimeImmutableTypeTest extends TestCase
     {
         self::expectException(InvalidType::class);
 
-        (new DateTimeImmutableType())->convertToDatabaseValue(1, $platform);
+        new DateTimeImmutableType()->convertToDatabaseValue(1, $platform);
     }
 
     #[DataProvider('platformProvider')]
@@ -53,13 +53,13 @@ final class DateTimeImmutableTypeTest extends TestCase
     {
         self::expectException(InvalidType::class);
 
-        (new DateTimeImmutableType())->convertToDatabaseValue('1', $platform);
+        new DateTimeImmutableType()->convertToDatabaseValue('1', $platform);
     }
 
     #[DataProvider('platformProvider')]
     public function test_must_convert_to_platform(AbstractPlatform $platform): void
     {
-        $type = (new DateTimeImmutableType())->convertToDatabaseValue(DateTimeImmutable::now(), $platform);
+        $type = new DateTimeImmutableType()->convertToDatabaseValue(DateTimeImmutable::now(), $platform);
 
         self::assertIsString($type);
     }
@@ -67,7 +67,7 @@ final class DateTimeImmutableTypeTest extends TestCase
     #[DataProvider('platformProvider')]
     public function test_must_convert_to_php(AbstractPlatform $platform): void
     {
-        $type = (new DateTimeImmutableType())->convertToPHPValue(date($platform->getDateTimeFormatString()), $platform);
+        $type = new DateTimeImmutableType()->convertToPHPValue(date($platform->getDateTimeFormatString()), $platform);
 
         self::assertInstanceOf(DateTimeImmutable::class, $type);
     }

@@ -46,7 +46,7 @@ final class NotEmptyStringTypeTest extends TestCase
     {
         self::expectException(InvalidType::class);
 
-        (new NotEmptyStringType())->convertToDatabaseValue(1, $platform);
+        new NotEmptyStringType()->convertToDatabaseValue(1, $platform);
     }
 
     #[DataProvider('platformProvider')]
@@ -54,7 +54,7 @@ final class NotEmptyStringTypeTest extends TestCase
     {
         self::expectException(InvalidType::class);
 
-        (new NotEmptyStringType())->convertToDatabaseValue('', $platform);
+        new NotEmptyStringType()->convertToDatabaseValue('', $platform);
     }
 
     #[DataProvider('platformProvider')]
@@ -62,7 +62,7 @@ final class NotEmptyStringTypeTest extends TestCase
     {
         self::expectException(InvalidFormat::class);
 
-        (new NotEmptyStringType())->convertToPHPValue(1, $platform);
+        new NotEmptyStringType()->convertToPHPValue(1, $platform);
     }
 
     #[DataProvider('platformProvider')]
@@ -70,13 +70,13 @@ final class NotEmptyStringTypeTest extends TestCase
     {
         self::expectException(InvalidFormat::class);
 
-        (new NotEmptyStringType())->convertToPHPValue('', $platform);
+        new NotEmptyStringType()->convertToPHPValue('', $platform);
     }
 
     #[DataProvider('platformProvider')]
     public function test_must_convert_to_platform(AbstractPlatform $platform): void
     {
-        $type = (new NotEmptyStringType())->convertToDatabaseValue(new NotEmptyString('some'), $platform);
+        $type = new NotEmptyStringType()->convertToDatabaseValue(new NotEmptyString('some'), $platform);
 
         self::assertIsString($type);
     }
@@ -84,7 +84,7 @@ final class NotEmptyStringTypeTest extends TestCase
     #[DataProvider('platformProvider')]
     public function test_must_convert_to_php(AbstractPlatform $platform): void
     {
-        $type = (new NotEmptyStringType())->convertToPHPValue('some', $platform);
+        $type = new NotEmptyStringType()->convertToPHPValue('some', $platform);
 
         self::assertInstanceOf(NotEmptyString::class, $type);
     }

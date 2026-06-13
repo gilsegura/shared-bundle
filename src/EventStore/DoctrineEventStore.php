@@ -41,7 +41,6 @@ final readonly class DoctrineEventStore extends AbstractObjectManager implements
         }
 
         try {
-            /** @var DomainMessage[] $messages */
             $messages = $this->search(
                 new Criteria\AndX(new Criteria\EqId($id)),
                 new Criteria\OrderX(new Criteria\ByPlayhead(Criteria\Expr\Order::ASC))
@@ -64,7 +63,6 @@ final readonly class DoctrineEventStore extends AbstractObjectManager implements
     private function loadFromPlayhead(Uuid $id, int $playhead): DomainEventStream
     {
         try {
-            /** @var DomainMessage[] $messages */
             $messages = $this->search(
                 new Criteria\AndX(
                     new Criteria\EqId($id),
@@ -103,7 +101,6 @@ final readonly class DoctrineEventStore extends AbstractObjectManager implements
     public function visitEvents(Criteria\AndX|Criteria\OrX $criteria, EventVisitorInterface $eventVisitor): void
     {
         try {
-            /** @var DomainMessage[] $messages */
             $messages = $this->search(
                 $criteria,
                 new Criteria\OrderX(new Criteria\ByRecordedAt(Criteria\Expr\Order::ASC))

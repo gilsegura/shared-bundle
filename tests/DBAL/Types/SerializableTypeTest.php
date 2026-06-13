@@ -45,7 +45,7 @@ final class SerializableTypeTest extends TestCase
     {
         self::expectException(InvalidType::class);
 
-        (new SerializableType())->convertToDatabaseValue(1, $platform);
+        new SerializableType()->convertToDatabaseValue(1, $platform);
     }
 
     #[DataProvider('platformProvider')]
@@ -53,13 +53,13 @@ final class SerializableTypeTest extends TestCase
     {
         self::expectException(InvalidType::class);
 
-        (new SerializableType())->convertToDatabaseValue('1', $platform);
+        new SerializableType()->convertToDatabaseValue('1', $platform);
     }
 
     #[DataProvider('platformProvider')]
     public function test_must_convert_to_platform(AbstractPlatform $platform): void
     {
-        $type = (new SerializableType())->convertToDatabaseValue(new Serializable(), $platform);
+        $type = new SerializableType()->convertToDatabaseValue(new Serializable(), $platform);
 
         self::assertIsString($type);
     }
@@ -67,16 +67,19 @@ final class SerializableTypeTest extends TestCase
     #[DataProvider('platformProvider')]
     public function test_must_convert_to_php(AbstractPlatform $platform): void
     {
-        $type = (new SerializableType())->convertToPHPValue('{"class":"SharedBundle\\\\Tests\\\\DBAL\\\\Types\\\\Serializable","attributes":[]}', $platform);
+        $type = new SerializableType()->convertToPHPValue('{"class":"SharedBundle\\\\Tests\\\\DBAL\\\\Types\\\\Serializable","attributes":[]}', $platform);
 
         self::assertInstanceOf(SerializableInterface::class, $type);
     }
 }
 
+/**
+ * @implements SerializableInterface<array{}>
+ */
 final readonly class Serializable implements SerializableInterface
 {
     #[\Override]
-    public static function deserialize(array $data): self
+    public static function deserialize(array $attributes): static
     {
         return new self();
     }

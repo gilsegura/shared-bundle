@@ -10,7 +10,7 @@ use Doctrine\Persistence\ObjectRepository;
 use Shared\Criteria;
 
 /**
- * @psalm-template TKey as array-key
+ * @template TKey of array-key
  *
  * @template-covariant T of object
  */
@@ -24,6 +24,8 @@ abstract readonly class AbstractObjectManager
     }
 
     /**
+     * @return T[]
+     *
      * @throws ObjectManagerException
      */
     final protected function search(
