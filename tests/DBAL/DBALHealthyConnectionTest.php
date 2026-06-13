@@ -22,6 +22,6 @@ final class DBALHealthyConnectionTest extends KernelTestCase
         /** @var DBALHealthyConnection $healthy */
         $healthy = self::getContainer()->get(DBALHealthyConnection::class);
 
-        self::assertTrue($healthy->__invoke());
+        self::assertTrue($healthy());
     }
 }

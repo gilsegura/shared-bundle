@@ -22,6 +22,6 @@ final class AMQPHealthyConnectionTest extends KernelTestCase
         /** @var AMQPHealthyConnection $healthy */
         $healthy = self::getContainer()->get(AMQPHealthyConnection::class);
 
-        self::assertFalse($healthy->__invoke());
+        self::assertFalse($healthy());
     }
 }

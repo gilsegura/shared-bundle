@@ -26,7 +26,7 @@ final class MessengerQueryBusUnitTest extends TestCase
         $messageBus = self::createStub(MessageBusInterface::class);
         $messageBus->method('dispatch')->willReturn($envelope);
 
-        $returned = new MessengerQueryBus($messageBus)->__invoke($query);
+        $returned = (new MessengerQueryBus($messageBus))($query);
 
         self::assertSame($result, $returned);
     }
@@ -40,7 +40,7 @@ final class MessengerQueryBusUnitTest extends TestCase
         $messageBus = self::createStub(MessageBusInterface::class);
         $messageBus->method('dispatch')->willReturn($envelope);
 
-        $returned = new MessengerQueryBus($messageBus)->__invoke($query);
+        $returned = (new MessengerQueryBus($messageBus))($query);
 
         self::assertNull($returned);
     }
@@ -54,7 +54,7 @@ final class MessengerQueryBusUnitTest extends TestCase
 
         $this->expectException(MessengerBusException::class);
 
-        new MessengerQueryBus($messageBus)->__invoke($query);
+        (new MessengerQueryBus($messageBus))($query);
     }
 
     public function test_must_unwrap_handler_failure_to_root_cause(): void
@@ -69,7 +69,7 @@ final class MessengerQueryBusUnitTest extends TestCase
 
         $this->expectExceptionObject($root);
 
-        new MessengerQueryBus($messageBus)->__invoke($query);
+        (new MessengerQueryBus($messageBus))($query);
     }
 
     public function test_must_wrap_unexpected_throwable(): void
@@ -82,6 +82,6 @@ final class MessengerQueryBusUnitTest extends TestCase
 
         $this->expectException(MessengerBusException::class);
 
-        new MessengerQueryBus($messageBus)->__invoke($query);
+        (new MessengerQueryBus($messageBus))($query);
     }
 }

@@ -42,7 +42,7 @@ abstract class AbstractApplicationTestCase extends KernelTestCase
     {
         assert($this->commandBus instanceof CommandBusInterface);
 
-        $this->commandBus->__invoke($command);
+        ($this->commandBus)($command);
     }
 
     /**
@@ -56,7 +56,7 @@ abstract class AbstractApplicationTestCase extends KernelTestCase
     {
         assert($this->queryBus instanceof QueryBusInterface);
 
-        return $this->queryBus->__invoke($query);
+        return ($this->queryBus)($query);
     }
 
     final public function fireTerminateEvents(): void

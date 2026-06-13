@@ -24,7 +24,7 @@ final class MessengerCommandBusUnitTest extends TestCase
             ->with($command)
             ->willReturn(new Envelope($command));
 
-        new MessengerCommandBus($messageBus)->__invoke($command);
+        (new MessengerCommandBus($messageBus))($command);
     }
 
     public function test_must_unwrap_handler_failure_to_root_cause(): void
@@ -39,7 +39,7 @@ final class MessengerCommandBusUnitTest extends TestCase
 
         $this->expectExceptionObject($root);
 
-        new MessengerCommandBus($messageBus)->__invoke($command);
+        (new MessengerCommandBus($messageBus))($command);
     }
 
     public function test_must_wrap_unexpected_throwable(): void
@@ -52,6 +52,6 @@ final class MessengerCommandBusUnitTest extends TestCase
 
         $this->expectException(MessengerBusException::class);
 
-        new MessengerCommandBus($messageBus)->__invoke($command);
+        (new MessengerCommandBus($messageBus))($command);
     }
 }

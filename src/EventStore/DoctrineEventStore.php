@@ -110,7 +110,7 @@ final readonly class DoctrineEventStore extends AbstractObjectManager implements
         }
 
         foreach ($messages as $message) {
-            $eventVisitor->__invoke($message);
+            $eventVisitor($message);
         }
     }
 }
