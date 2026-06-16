@@ -5,27 +5,11 @@
 [![static analysis](https://github.com/gilsegura/shared-bundle/actions/workflows/static-analysis.yaml/badge.svg)](https://github.com/gilsegura/shared-bundle/actions/workflows/static-analysis.yaml)
 [![coding standards](https://github.com/gilsegura/shared-bundle/actions/workflows/coding-standards.yaml/badge.svg)](https://github.com/gilsegura/shared-bundle/actions/workflows/coding-standards.yaml)
 
-Symfony bridge for the [gilsegura/shared](https://github.com/gilsegura/shared)
-CQRS and Event Sourcing component.
-
-The bundle wires the framework-agnostic building blocks of `gilsegura/shared`
-into a Symfony application: a Doctrine-backed event store and object managers,
-custom DBAL types for the domain value objects, Messenger-based command and
-query buses, a lifecycle-aware event publisher, and a database health check.
-
-## Features
-
-* PHP 8.5+
-* Symfony 8.1+
-* Doctrine ORM 3 and DBAL 4
-* Doctrine-backed event store and read-model persistence
-* Custom DBAL types for the shared value objects
-* Messenger-based command and query buses
-* Lifecycle-aware event publisher with graceful worker shutdown
-* Automatic registration of event listeners on the event bus
-* Database health check
-* Transport-agnostic: route events to any Messenger transport you configure
-* Semantic exceptions aligned with `gilsegura/shared`
+The Symfony integration for [`gilsegura/shared`](https://github.com/gilsegura/shared).
+It wires the framework-agnostic DDD/ES/CQRS building blocks to Symfony Messenger
+and Doctrine: command/query buses, a Doctrine-backed event store, DBAL types for
+the domain value objects, a criteria-to-Doctrine converter, and the event-bus
+plumbing.
 
 ## Installation
 
@@ -33,156 +17,74 @@ query buses, a lifecycle-aware event publisher, and a database health check.
 composer require gilsegura/shared-bundle
 ```
 
-Register the bundle in `config/bundles.php`:
+Requires PHP 8.4+, and runs on **Symfony 7.4 and 8.1**. Register the bundle (it
+declares its dependency on DoctrineBundle, so make sure DoctrineBundle is
+installed):
 
 ```php
+// config/bundles.php
 return [
     // ...
     SharedBundle\SharedBundle::class => ['all' => true],
 ];
 ```
 
-The bundle requires DoctrineBundle and prepends its own configuration (DBAL
-types and Messenger wiring) automatically when it boots.
+## What it provides
 
-## DBAL types
+### Command & query buses (Messenger)
 
-The bundle registers custom DBAL types that map the shared value objects to
-database columns, prepending them to the Doctrine configuration on boot:
+`MessengerCommandBus` and `MessengerQueryBus` implement the `shared`
+`CommandBusInterface` / `QueryBusInterface` on top of Symfony Messenger. They
+unwrap `HandlerFailedException` so your handlers' real exceptions surface
+instead of Messenger's wrapper. The bundle preconfigures three buses:
 
-| Type | Maps | Column |
-| --- | --- | --- |
-| `uuid` | `Uuid` | UUID/string |
-| `email` | `Email` | string |
-| `hashed_password` | `HashedPassword` | string |
-| `not_empty_string` | `NotEmptyString` | string |
-| `datetime_immutable` | `DateTimeImmutable` | datetime |
-| `serializable` | any `SerializableInterface` | JSON |
+- `messenger.bus.command` — synchronous, transactional (`doctrine_transaction`).
+- `messenger.bus.query` — synchronous, no transaction.
+- `messenger.bus.event.async` — for asynchronous domain-event handling.
 
-The `serializable` type is the bridge to `gilsegura/serializer`: on write it
-stores the object as a `{class, attributes}` JSON document; on read it restores
-the exact concrete type through the serializer facade. This is how a
-`DomainMessage`'s `metadata` and event `payload` are persisted.
+### Doctrine event store
 
-Mapping a value object in an entity is then a matter of naming the type:
+`DoctrineEventStore` persists and loads `DomainEventStream`s through Doctrine,
+serializing payloads with `gilsegura/serializer`.
 
-```xml
-<field name="id" column="id" type="uuid"/>
-<field name="payload" column="payload" type="serializable"/>
-```
+### DBAL types for the domain value objects
 
-## Event store
+Doctrine DBAL types so the `shared` value objects map transparently to columns:
+`uuid`, `email`, `hashed_password`, `not_empty_string`, `serializable`, and an
+immutable `datetime`. They are registered automatically via the bundle's
+`prependExtension`, so you can use them directly in your mappings.
 
-`DoctrineEventStore` implements the shared `EventStoreInterface` and
-`EventStoreManagerInterface` on top of a Doctrine `EntityManager`. It persists
-`DomainMessage` streams, enforces playhead uniqueness per aggregate, and exposes
-`load()` (optionally up to a playhead), `append()` and `visitEvents()` for
-walking stored events through a visitor. Loading a missing or duplicate stream
-surfaces the shared `StreamNotFoundException` / `StreamAlreadyExistsException`.
+### Criteria → Doctrine
 
-It extends `AbstractObjectManager`, the shared base for Doctrine-backed
-repositories described below.
+`DoctrineCriteriaConverter` translates the `shared` criteria/expression tree
+(`AndX`, `OrX`, `Comparison`, `OrderX`) into a Doctrine `Criteria`, so a query
+built with the `shared` DSL runs against a Doctrine repository.
+`AbstractObjectManager` gives you a typed base for Doctrine-backed repositories.
 
-## Object managers
+### Event-bus wiring
 
-`AbstractObjectManager` is a generic, immutable base for Doctrine repositories.
-It wraps an `EntityManager` and a `Selectable` repository, and provides
-protected helpers — `search()`, `count()`, `register()` and `unregister()` —
-that translate the shared `Criteria` into Doctrine queries and persist or remove
-managed objects. Read-model repositories and the event store build on it, so
-filtering, ordering and pagination are expressed once in terms of `Criteria`.
+Services implementing `Shared\EventHandling\EventListenerInterface` are
+autoconfigured with a tag, and `EventBusSubscriberPass` injects them into the
+`SimpleEventBus` at compile time. `EventPublisher` flushes recorded domain
+messages to the async event bus on kernel/console/worker termination, so events
+are published after the response is sent.
 
-## Command and query buses
+## Symfony 7.4 and 8.1
 
-`MessengerCommandBus` and `MessengerQueryBus` implement the shared
-`CommandBusInterface` and `QueryBusInterface` over Symfony Messenger.
+The bundle targets both the current LTS (7.4) and the latest stable (8.1). The
+dependency on DoctrineBundle is declared through `getBundleDependencies()` rather
+than the `#[RequiredBundle]` attribute, since that attribute only exists in
+Symfony 8.1+; every other API used here is stable across both versions.
 
-The command bus dispatches a command and returns nothing. The query bus
-dispatches a query and returns the handler's result, preserving the query's
-declared result type (a read model, a list of read models, or `null` when
-nothing is found). If no handler processed the query, a `MessengerBusException`
-is raised.
+## Design notes
 
-Handler failures are unwrapped to their root cause by
-`UnwrapsHandlerFailureTrait` and re-thrown, so callers see the original domain
-exception rather than Messenger's `HandlerFailedException`. Any other failure is
-wrapped in a `MessengerBusException`.
-
-Handlers are plain invokable classes implementing the shared marker interfaces;
-Messenger discovers which handler serves which message from the `__invoke`
-signature.
-
-## Event publishing
-
-`EventPublisher` decouples recording events from dispatching them. It implements
-the shared `EventListenerInterface` to collect `DomainMessage` instances during
-the request or command lifecycle, and subscribes to kernel and console
-`TERMINATE` events and to Messenger's `WorkerStoppedEvent` to flush the
-collected messages to the event bus when the unit of work finishes.
-
-Combined with Messenger's `stop_worker_on_signals`, pending events are flushed on
-a graceful `SIGTERM` / `SIGINT` shutdown, so a worker stopped mid-run does not
-lose buffered events.
-
-`UnwrapDomainMessageMiddleware` is a Messenger middleware that unwraps a received
-`DomainMessage` envelope so listeners receive the domain message directly.
-
-### Routing events to a transport
-
-The publisher dispatches each `DomainMessage` to the event bus without binding
-it to any specific transport, so the choice of transport is yours. Route the
-domain message to a transport in your Messenger configuration:
-
-```yaml
-framework:
-    messenger:
-        transports:
-            async: '%env(MESSENGER_TRANSPORT_DSN)%'
-
-        routing:
-            'Shared\Domain\DomainMessage': async
-```
-
-The transport DSN can be AMQP, Doctrine, Redis or any other Messenger
-transport — the bundle does not require or assume any of them.
-
-## Event listener registration
-
-`EventBusSubscriberPass` is a compiler pass that discovers every service tagged
-as an event listener and registers it on the `SimpleEventBus` automatically, so
-listeners are wired without manual configuration. Tag a service with the shared
-`EventListenerInterface` autoconfiguration and it is subscribed to the bus.
-
-## Criteria conversion
-
-`DoctrineCriteriaConverter` translates the shared `Criteria` expressions into a
-Doctrine `Collections\Criteria`, used by the object managers for filtering,
-ordering and pagination. Unsupported expressions raise a
-`CriteriaConverterException`.
-
-## Health check
-
-`DBALHealthyConnection` is an invokable health check that verifies the Doctrine
-DBAL connection is reachable. It returns a boolean and can be wired into a
-health endpoint or a console command for readiness probes.
-
-## Requirements
-
-* PHP 8.5+ and Symfony 8.1+
-* Doctrine ORM 3 / DBAL 4, DoctrineBundle
-* The `ext-pcntl` extension is recommended so Messenger workers can handle
-  `SIGTERM` / `SIGINT` for a graceful shutdown that flushes pending events.
-
-## How it fits together
-
-A typical write flow: a command is dispatched through `MessengerCommandBus` to
-its handler, which loads an aggregate from `DoctrineEventStore`, applies domain
-events, and saves it back. The recorded `DomainMessage` stream is persisted with
-the `serializable` DBAL type. `EventPublisher` buffers the resulting events and,
-when the lifecycle ends, publishes them to listeners (such as projectors) that
-update read models. A read flow dispatches a query through `MessengerQueryBus`
-to a handler that reads from a read-model repository built on
-`AbstractObjectManager`.
+- **Thin integration layer.** All domain logic lives in `gilsegura/shared`; this
+  package only adapts it to Symfony and Doctrine.
+- **Exceptions are typed and unwrapped.** Infrastructure failures become
+  `MessengerBusException` / `ObjectManagerException`; handler exceptions are
+  unwrapped from Messenger's `HandlerFailedException`.
+- **PHP 8.4, strictly analysed.** Built and checked under PHPStan `max` with
+  strict rules and the Symfony extension.
 
 ## License
 

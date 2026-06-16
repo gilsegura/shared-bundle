@@ -1,12 +1,12 @@
 {
     "name": "gilsegura/shared-bundle",
-    "description": "Symfony bridge for the gilsegura/shared CQRS and Event Sourcing component.",
+    "description": "Symfony integration for gilsegura/shared: Messenger-backed command/query buses, a Doctrine event store, DBAL types for the domain value objects, a criteria-to-Doctrine converter and the event-bus wiring.",
     "type": "symfony-bundle",
     "license": "MIT",
     "minimum-stability": "stable",
     "prefer-stable": true,
     "require": {
-        "php": "^8.5",
+        "php": "^8.4",
         "ext-json": "*",
         "doctrine/dbal": "^4.4",
         "doctrine/doctrine-bundle": "^3.2",
@@ -14,31 +14,25 @@
         "doctrine/persistence": "^4.0",
         "gilsegura/serializer": "^1.0",
         "gilsegura/shared": "^1.0",
-        "symfony/config": "^8.1",
-        "symfony/console": "^8.1",
-        "symfony/dependency-injection": "^8.1",
-        "symfony/event-dispatcher": "^8.1",
-        "symfony/http-kernel": "^8.1",
-        "symfony/messenger": "^8.1"
+        "symfony/console": "^7.4 || ^8.1",
+        "symfony/dependency-injection": "^7.4 || ^8.1",
+        "symfony/event-dispatcher": "^7.4 || ^8.1",
+        "symfony/http-kernel": "^7.4 || ^8.1",
+        "symfony/messenger": "^7.4 || ^8.1"
     },
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.95",
         "phpstan/phpstan": "^2.1",
         "phpstan/phpstan-strict-rules": "^2.0",
+        "phpstan/phpstan-symfony": "^2.0",
         "phpunit/phpunit": "^13.1",
         "rector/rector": "^2.4",
-        "symfony/error-handler": "^8.1",
-        "symfony/framework-bundle": "^8.1",
-        "symfony/http-foundation": "^8.1",
-        "symfony/phpunit-bridge": "^8.1"
+        "symfony/phpunit-bridge": "^7.4 || ^8.1"
     },
     "autoload": {
         "psr-4": {
             "SharedBundle\\": "src/"
         }
-    },
-    "suggest": {
-        "ext-pcntl": "To gracefully stop Messenger workers on SIGTERM/SIGINT signals."
     },
     "autoload-dev": {
         "psr-4": {

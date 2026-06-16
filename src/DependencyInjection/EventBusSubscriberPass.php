@@ -28,7 +28,7 @@ final class EventBusSubscriberPass implements CompilerPassInterface
                 $r = new \ReflectionClass($class);
 
                 if (!$r->implementsInterface(EventListenerInterface::class)) {
-                    throw new \InvalidArgumentException(sprintf('Service "%s" must implement interface "%s".', $id, EventListenerInterface::class));
+                    throw new \InvalidArgumentException(\sprintf('Service "%s" must implement interface "%s".', $id, EventListenerInterface::class));
                 }
 
                 $definition->addArgument(new Reference($id));

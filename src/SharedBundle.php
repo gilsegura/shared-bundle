@@ -16,13 +16,24 @@ use SharedBundle\DBAL\Types\UuidType;
 use SharedBundle\DependencyInjection\EventBusSubscriberPass;
 use SharedBundle\EventHandling\UnwrapDomainMessageMiddleware;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
-use Symfony\Component\DependencyInjection\Kernel\RequiredBundle;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 
-#[RequiredBundle(DoctrineBundle::class)]
 final class SharedBundle extends AbstractBundle
 {
+    /**
+     * Declares the hard dependency on DoctrineBundle in a way that works on both
+     * Symfony 7.4 and 8.1 (the #[RequiredBundle] attribute only exists in 8.1+).
+     *
+     * @return array<class-string, array<string, bool>>
+     */
+    public static function getBundleDependencies(): array
+    {
+        return [
+            DoctrineBundle::class => ['all' => true],
+        ];
+    }
+
     #[\Override]
     public function getPath(): string
     {

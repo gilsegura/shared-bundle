@@ -9,7 +9,7 @@ use Rector\CodingStyle\Rector\Catch_\CatchExceptionNameMatchingTypeRector;
 
 return static function (RectorConfig $rectorConfig): void {
     $rectorConfig->sets([
-        SetList::PHP_85,
+        SetList::PHP_84,
         SetList::CODE_QUALITY,
         SetList::CODING_STYLE,
         SetList::EARLY_RETURN,

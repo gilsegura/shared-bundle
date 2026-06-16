@@ -10,6 +10,6 @@ final class CriteriaConverterException extends UnexpectedException
 {
     public static function unsupportedExpression(string $className): self
     {
-        return new self(sprintf('The requested expression "%s" is not supported.', $className));
+        return new self(\sprintf('The requested expression "%s" is not supported.', $className));
     }
 }
