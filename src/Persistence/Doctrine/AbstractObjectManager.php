@@ -16,11 +16,21 @@ use Shared\Criteria;
  */
 abstract readonly class AbstractObjectManager
 {
+    /** @var ObjectRepository<T>&Selectable<TKey, T> */
+    private ObjectRepository&Selectable $repository;
+
+    /**
+     * Subclasses pass the entity class they manage; the Doctrine repository is
+     * resolved here, so a concrete object manager never calls getRepository()
+     * itself. Combined with #[ObjectManager], it needs no constructor at all.
+     *
+     * @param class-string<T> $entity
+     */
     public function __construct(
         private EntityManagerInterface $manager,
-        /** @var ObjectRepository<T>&Selectable<TKey, T> */
-        private ObjectRepository&Selectable $repository,
+        string $entity,
     ) {
+        $this->repository = $manager->getRepository($entity);
     }
 
     /**

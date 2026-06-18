@@ -1,15 +1,15 @@
 # SHARED BUNDLE
-
 [![tests](https://github.com/gilsegura/shared-bundle/actions/workflows/tests.yaml/badge.svg)](https://github.com/gilsegura/shared-bundle/actions/workflows/tests.yaml)
 [![codecov](https://codecov.io/github/gilsegura/shared-bundle/graph/badge.svg)](https://codecov.io/github/gilsegura/shared-bundle)
 [![static analysis](https://github.com/gilsegura/shared-bundle/actions/workflows/static-analysis.yaml/badge.svg)](https://github.com/gilsegura/shared-bundle/actions/workflows/static-analysis.yaml)
 [![coding standards](https://github.com/gilsegura/shared-bundle/actions/workflows/coding-standards.yaml/badge.svg)](https://github.com/gilsegura/shared-bundle/actions/workflows/coding-standards.yaml)
 
-The Symfony integration for [`gilsegura/shared`](https://github.com/gilsegura/shared).
-It wires the framework-agnostic DDD/ES/CQRS building blocks to Symfony Messenger
-and Doctrine: command/query buses, a Doctrine-backed event store, DBAL types for
-the domain value objects, a criteria-to-Doctrine converter, and the event-bus
-plumbing.
+Symfony integration for the `gilsegura/shared` package. It wires the DDD / CQRS /
+event-sourcing building blocks onto Symfony Messenger and Doctrine, so an
+application writes its commands, queries, handlers, projectors and repositories
+and the bundle takes care of the plumbing: the command, query and event buses,
+the Doctrine DBAL types for the shared value objects, the event store, and the
+attribute-driven wiring for repositories.
 
 ## Installation
 
@@ -17,74 +17,191 @@ plumbing.
 composer require gilsegura/shared-bundle
 ```
 
-Requires PHP 8.4+, and runs on **Symfony 7.4 and 8.1**. Register the bundle (it
-declares its dependency on DoctrineBundle, so make sure DoctrineBundle is
-installed):
+Register the bundle (DoctrineBundle is a required dependency, so it must be
+registered too):
 
 ```php
 // config/bundles.php
 return [
-    // ...
+    Doctrine\Bundle\DoctrineBundle\DoctrineBundle::class => ['all' => true],
     SharedBundle\SharedBundle::class => ['all' => true],
 ];
 ```
 
-## What it provides
+## Configuration
 
-### Command & query buses (Messenger)
+The bundle defines three Messenger buses (command, query and async event) and
+the middleware around them. Two things are left to the application, because they
+are deployment decisions the bundle cannot make for you:
 
-`MessengerCommandBus` and `MessengerQueryBus` implement the `shared`
-`CommandBusInterface` / `QueryBusInterface` on top of Symfony Messenger. They
-unwrap `HandlerFailedException` so your handlers' real exceptions surface
-instead of Messenger's wrapper. The bundle preconfigures three buses:
+**1. A transport and routing for the async event bus.** Domain events are
+published to the `messenger.bus.event.async` bus; route the messages you want to
+process out of band to a transport:
 
-- `messenger.bus.command` — synchronous, transactional (`doctrine_transaction`).
-- `messenger.bus.query` — synchronous, no transaction.
-- `messenger.bus.event.async` — for asynchronous domain-event handling.
+```yaml
+# config/packages/messenger.yaml
+framework:
+  messenger:
+    transports:
+      async: '%env(MESSENGER_TRANSPORT_DSN)%'
+    routing:
+      'Shared\Domain\DomainMessage': async
+```
 
-### Doctrine event store
+**2. A configured Doctrine connection.** The command bus runs inside a
+`doctrine_transaction` middleware, so a working DBAL connection and entity
+manager must be configured by the application.
 
-`DoctrineEventStore` persists and loads `DomainEventStream`s through Doctrine,
-serializing payloads with `gilsegura/serializer`.
+The bundle maps only `Shared\Domain`. **Mapping the application's own entities
+and read models is the application's responsibility.**
 
-### DBAL types for the domain value objects
+The bus ids are exposed as constants so configuration and tests never hardcode
+the strings:
 
-Doctrine DBAL types so the `shared` value objects map transparently to columns:
-`uuid`, `email`, `hashed_password`, `not_empty_string`, `serializable`, and an
-immutable `datetime`. They are registered automatically via the bundle's
-`prependExtension`, so you can use them directly in your mappings.
+```php
+SharedBundle\SharedBundle::COMMAND_BUS;  // messenger.bus.command
+SharedBundle\SharedBundle::QUERY_BUS;    // messenger.bus.query
+SharedBundle\SharedBundle::EVENT_BUS;    // messenger.bus.event.async
+```
 
-### Criteria → Doctrine
+## How events flow
 
-`DoctrineCriteriaConverter` translates the `shared` criteria/expression tree
-(`AndX`, `OrX`, `Comparison`, `OrderX`) into a Doctrine `Criteria`, so a query
-built with the `shared` DSL runs against a Doctrine repository.
-`AbstractObjectManager` gives you a typed base for Doctrine-backed repositories.
+The bundle bridges two worlds: the synchronous, in-process domain event bus and
+the asynchronous Messenger bus.
 
-### Event-bus wiring
+1. A handler applies events on an aggregate and saves it through its repository.
+2. On save, the **`SimpleEventBus`** publishes the domain messages synchronously
+   to its **domain listeners** — anything implementing `EventListenerInterface`.
+   Application **projectors** live here: they update read models in the same
+   request, in order, fail-fast.
+3. One of those listeners is the bundle's **`EventPublisher`**. It does not
+   process the events; it collects them and, on `kernel.terminate` /
+   `console.terminate` / `worker.stopped` (i.e. after the response is sent, or
+   on `SIGTERM`), dispatches each `DomainMessage` to the async Messenger bus.
+4. On the worker side, **`UnwrapDomainMessageMiddleware`** unwraps the
+   `DomainMessage` and passes its `payload` — the actual domain event — to the
+   regular Symfony Messenger handlers the application writes with
+   `#[AsMessageHandler]`.
 
-Services implementing `Shared\EventHandling\EventListenerInterface` are
-autoconfigured with a tag, and `EventBusSubscriberPass` injects them into the
-`SimpleEventBus` at compile time. `EventPublisher` flushes recorded domain
-messages to the async event bus on kernel/console/worker termination, so events
-are published after the response is sent.
+So: write a **projector** (`EventListenerInterface`) for work that must happen
+synchronously in the same request, and a **Messenger handler** for work that
+should happen asynchronously off a transport.
 
-## Symfony 7.4 and 8.1
+## The pieces
 
-The bundle targets both the current LTS (7.4) and the latest stable (8.1). The
-dependency on DoctrineBundle is declared through `getBundleDependencies()` rather
-than the `#[RequiredBundle]` attribute, since that attribute only exists in
-Symfony 8.1+; every other API used here is stable across both versions.
+### Command and query buses
 
-## Design notes
+`MessengerCommandBus` and `MessengerQueryBus` implement the domain
+`CommandBusInterface` / `QueryBusInterface` on top of Messenger. They unwrap
+Messenger's `HandlerFailedException` so callers see the real domain exception,
+not the framework wrapper.
 
-- **Thin integration layer.** All domain logic lives in `gilsegura/shared`; this
-  package only adapts it to Symfony and Doctrine.
-- **Exceptions are typed and unwrapped.** Infrastructure failures become
-  `MessengerBusException` / `ObjectManagerException`; handler exceptions are
-  unwrapped from Messenger's `HandlerFailedException`.
-- **PHP 8.4, strictly analysed.** Built and checked under PHPStan `max` with
-  strict rules and the Symfony extension.
+Handlers are autoconfigured by the interface they implement — no tags, no bus
+names:
+
+```php
+use Shared\CommandHandling\CommandHandlerInterface;
+
+/** @implements CommandHandlerInterface<RegisterUser> */
+final readonly class RegisterUserHandler implements CommandHandlerInterface
+{
+    public function __invoke(RegisterUser $command): void { ... }
+}
+```
+
+`CommandHandlerInterface` is routed to the command bus and `QueryHandlerInterface`
+to the query bus automatically.
+
+### Event publishing
+
+`EventPublisher` and `UnwrapDomainMessageMiddleware` form the bridge described
+above. `EventPublisher` is registered both as a domain `EventListenerInterface`
+(it collects domain messages) and as a kernel/console/worker subscriber (it
+flushes them to the async bus when the process winds down).
+
+### Domain event listeners (projectors)
+
+Any service implementing `EventListenerInterface` is collected onto the
+`SimpleEventBus` by a compiler pass. In practice a read-model projector extends
+`Shared\ReadModel\AbstractProjector`, which implements that interface and
+resolves an `applyXxx` method from each event's short name (the same convention
+aggregates use), so a projector only writes the handlers for the events it cares
+about:
+
+```php
+use Shared\ReadModel\AbstractProjector;
+
+final readonly class UserProjector extends AbstractProjector {...}
+```
+
+Events with no matching `applyXxx` method are simply ignored, so each projector
+reacts only to the events it needs. Because `AbstractProjector` implements
+`EventListenerInterface`, the projector is registered on the event bus with no
+extra configuration.
+
+### Doctrine DBAL types
+
+Custom DBAL types map the shared value objects to columns and back, registered
+automatically: `Uuid`, `Email`, `HashedPassword`, `NotEmptyString`,
+`Serializable` and `DateTimeImmutable`. Use them as column types in the
+application's Doctrine mappings.
+
+### Event store
+
+`DoctrineEventStore` is the Doctrine-backed event store (`EventStoreInterface` +
+`EventStoreManagerInterface`). It extends `AbstractObjectManager` and is wired
+from its `#[ObjectManager(DomainMessage::class)]` attribute, so it carries no
+constructor.
+
+### Persistence: object managers
+
+`AbstractObjectManager` is the base for Doctrine-backed repositories and read
+models. It resolves the Doctrine repository from the entity class and provides
+protected criteria-based `search` / `count` helpers for concrete managers to
+build their own query methods on. Concrete managers declare the entity with
+`#[ObjectManager]` and need no constructor:
+
+```php
+use SharedBundle\Persistence\Doctrine\AbstractObjectManager;
+use SharedBundle\Persistence\Doctrine\Attribute\ObjectManager;
+
+/** @template-extends AbstractObjectManager<int, User> */
+#[ObjectManager(User::class)]
+final readonly class UserReadModelRepository extends AbstractObjectManager
+    implements UserReadModelRepositoryInterface { ... }
+```
+
+### Event-sourced repositories
+
+A write-side repository extends `AbstractEventSourcingRepository` and declares
+its aggregate with `#[AggregateRoot]`. The bundle injects the event store, the
+event bus, the stream decorator and an aggregate factory built for that class,
+so the repository has no constructor:
+
+```php
+use Shared\EventSourcing\AbstractEventSourcingRepository;
+use SharedBundle\EventSourcing\Attribute\AggregateRoot;
+
+/** @template-extends AbstractEventSourcingRepository<User> */
+#[AggregateRoot(User::class)]
+final readonly class UserRepository extends AbstractEventSourcingRepository
+    implements UserRepositoryInterface
+{
+    public function get(Uuid $id, ?int $playhead = null): User { ... }
+    public function store(User $user): void { $this->save($user); }
+}
+```
+
+### Criteria converter
+
+`DoctrineCriteriaConverter` translates the `Shared\Criteria` DSL into a Doctrine
+`Criteria`, so repositories query with the domain's own filter/sort objects
+instead of Doctrine-specific expressions.
+
+### Health check
+
+`DBALHealthyConnection` is an invokable that reports whether the DBAL connection
+is reachable — useful behind a health-check endpoint.
 
 ## License
 

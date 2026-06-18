@@ -1,6 +1,6 @@
 {
     "name": "gilsegura/shared-bundle",
-    "description": "Symfony integration for gilsegura/shared: Messenger-backed command/query buses, a Doctrine event store, DBAL types for the domain value objects, a criteria-to-Doctrine converter and the event-bus wiring.",
+    "description": "Symfony integration for the `gilsegura/shared` package.",
     "type": "symfony-bundle",
     "license": "MIT",
     "minimum-stability": "stable",

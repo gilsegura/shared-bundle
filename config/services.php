@@ -18,6 +18,7 @@ use SharedBundle\DBAL\DBALHealthyConnection;
 use SharedBundle\EventHandling\EventPublisher;
 use SharedBundle\EventHandling\UnwrapDomainMessageMiddleware;
 use SharedBundle\EventStore\DoctrineEventStore;
+use SharedBundle\SharedBundle;
 
 return static function (ContainerConfigurator $container): void {
     $services = $container->services()
@@ -28,17 +29,17 @@ return static function (ContainerConfigurator $container): void {
 
     // COMMAND BUS
     $services->set(MessengerCommandBus::class)
-        ->args([service('messenger.bus.command')]);
+        ->args([service(SharedBundle::COMMAND_BUS)]);
     $services->alias(CommandBusInterface::class, MessengerCommandBus::class);
 
     // QUERY BUS
     $services->set(MessengerQueryBus::class)
-        ->args([service('messenger.bus.query')]);
+        ->args([service(SharedBundle::QUERY_BUS)]);
     $services->alias(QueryBusInterface::class, MessengerQueryBus::class);
 
     // EVENT PUBLISHER
     $services->set(EventPublisher::class)
-        ->args([service('messenger.bus.event.async')])
+        ->args([service(SharedBundle::EVENT_BUS)])
         ->tag('kernel.event_subscriber');
 
     $services->set(UnwrapDomainMessageMiddleware::class);
@@ -55,8 +56,9 @@ return static function (ContainerConfigurator $container): void {
     $services->alias(EventStreamDecoratorInterface::class, MetadataEnrichingEventStreamDecorator::class);
 
     // EVENT STORE
-    $services->set(DoctrineEventStore::class)
-        ->args([service('doctrine.orm.entity_manager')]);
+    // Constructor arguments are injected by ObjectManagerPass from the
+    // #[ObjectManager(DomainMessage::class)] attribute on the class.
+    $services->set(DoctrineEventStore::class);
     $services->alias(EventStoreInterface::class, DoctrineEventStore::class);
     $services->alias(EventStoreManagerInterface::class, DoctrineEventStore::class);
 };

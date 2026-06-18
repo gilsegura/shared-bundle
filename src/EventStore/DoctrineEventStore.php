@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace SharedBundle\EventStore;
 
-use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\EntityIdentityCollisionException;
 use Shared\Criteria;
 use Shared\Domain\DomainEventStream;
@@ -17,22 +16,15 @@ use Shared\EventStore\EventVisitorInterface;
 use Shared\EventStore\StreamAlreadyExistsException;
 use Shared\EventStore\StreamNotFoundException;
 use SharedBundle\Persistence\Doctrine\AbstractObjectManager;
+use SharedBundle\Persistence\Doctrine\Attribute\ObjectManager;
 use SharedBundle\Persistence\Doctrine\ObjectManagerException;
 
 /**
  * @template-extends AbstractObjectManager<int, DomainMessage>
  */
+#[ObjectManager(DomainMessage::class)]
 final readonly class DoctrineEventStore extends AbstractObjectManager implements EventStoreInterface, EventStoreManagerInterface
 {
-    public function __construct(
-        EntityManagerInterface $manager,
-    ) {
-        parent::__construct(
-            $manager,
-            $manager->getRepository(DomainMessage::class)
-        );
-    }
-
     #[\Override]
     public function load(Uuid $id, ?int $playhead = null): DomainEventStream
     {

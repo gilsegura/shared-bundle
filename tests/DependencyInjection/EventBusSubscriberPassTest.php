@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use Shared\EventHandling\EventListenerInterface;
 use Shared\EventHandling\SimpleEventBus;
 use SharedBundle\DependencyInjection\EventBusSubscriberPass;
+use SharedBundle\SharedBundle;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
@@ -38,7 +39,7 @@ final class EventBusSubscriberPassTest extends TestCase
 
         $eventListener = new Definition(\stdClass::class);
         $eventListener->setPublic(true);
-        $eventListener->addTag('packages.shared.event_handling.event_listener');
+        $eventListener->addTag(SharedBundle::EVENT_LISTENER_TAG);
 
         $this->container->setDefinition('event_listener', $eventListener);
 
@@ -54,7 +55,7 @@ final class EventBusSubscriberPassTest extends TestCase
 
         $eventListener = new Definition(EventListenerInterface::class);
         $eventListener->setPublic(true);
-        $eventListener->addTag('packages.shared.event_handling.event_listener');
+        $eventListener->addTag(SharedBundle::EVENT_LISTENER_TAG);
 
         $this->container->setDefinition('event_listener', $eventListener);
 

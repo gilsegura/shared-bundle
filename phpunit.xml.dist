@@ -24,7 +24,7 @@
       <directory>./src/</directory>
     </include>
   </source>
-  <coverage includeUncoveredFiles="false">
+  <coverage>
     <report>
       <html outputDirectory="report/html"/>
     </report>

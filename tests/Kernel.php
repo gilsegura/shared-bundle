@@ -27,6 +27,7 @@ final class Kernel extends BaseKernel implements CompilerPassInterface
 {
     use MicroKernelTrait;
 
+    #[\Override]
     public function registerBundles(): iterable
     {
         return [
@@ -36,6 +37,7 @@ final class Kernel extends BaseKernel implements CompilerPassInterface
         ];
     }
 
+    #[\Override]
     public function process(ContainerBuilder $container): void
     {
         $container->findDefinition(MessengerCommandBus::class)->setPublic(true);
@@ -48,6 +50,7 @@ final class Kernel extends BaseKernel implements CompilerPassInterface
         $container->findDefinition(DBALHealthyConnection::class)->setPublic(true);
     }
 
+    #[\Override]
     public function registerContainerConfiguration(LoaderInterface $loader): void
     {
         $loader->load(static function (ContainerBuilder $container): void {
@@ -72,29 +75,27 @@ final class Kernel extends BaseKernel implements CompilerPassInterface
                 ],
             ]);
 
+            // Handlers only need to be registered and autoconfigured: the bundle
+            // routes them to their bus from the interface they implement.
             $container
                 ->register(ThrowableCommandHandler::class, ThrowableCommandHandler::class)
                 ->setAutoconfigured(true)
-                ->setAutowired(true)
-                ->addTag('messenger.message_handler', ['bus' => 'messenger.bus.command']);
+                ->setAutowired(true);
 
             $container
                 ->register(ACommandHandler::class, ACommandHandler::class)
                 ->setAutoconfigured(true)
-                ->setAutowired(true)
-                ->addTag('messenger.message_handler', ['bus' => 'messenger.bus.command']);
+                ->setAutowired(true);
 
             $container
                 ->register(ThrowableQueryHandler::class, ThrowableQueryHandler::class)
                 ->setAutoconfigured(true)
-                ->setAutowired(true)
-                ->addTag('messenger.message_handler', ['bus' => 'messenger.bus.query']);
+                ->setAutowired(true);
 
             $container
                 ->register(AQueryHandler::class, AQueryHandler::class)
                 ->setAutoconfigured(true)
-                ->setAutowired(true)
-                ->addTag('messenger.message_handler', ['bus' => 'messenger.bus.query']);
+                ->setAutowired(true);
         });
     }
 }

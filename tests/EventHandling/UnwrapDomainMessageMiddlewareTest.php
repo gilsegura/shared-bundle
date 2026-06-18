@@ -9,6 +9,7 @@ use Shared\Domain\DomainMessage;
 use Shared\Domain\Metadata;
 use Shared\Domain\Uuid;
 use SharedBundle\EventHandling\UnwrapDomainMessageMiddleware;
+use SharedBundle\SharedBundle;
 use SharedBundle\Tests\CommandHandling\EventWasOccurred;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Middleware\MiddlewareInterface;
@@ -50,7 +51,7 @@ final class UnwrapDomainMessageMiddlewareTest extends TestCase
             $this->domainMessage(new EventWasOccurred()),
             [
                 new ReceivedStamp('async'),
-                new BusNameStamp('messenger.bus.event.async'),
+                new BusNameStamp(SharedBundle::EVENT_BUS),
                 new TransportMessageIdStamp('message-id'),
             ]
         );
