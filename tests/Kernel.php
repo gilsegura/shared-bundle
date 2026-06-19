@@ -16,6 +16,7 @@ use SharedBundle\Tests\CommandHandling\ACommandHandler;
 use SharedBundle\Tests\CommandHandling\AQueryHandler;
 use SharedBundle\Tests\CommandHandling\ThrowableCommandHandler;
 use SharedBundle\Tests\CommandHandling\ThrowableQueryHandler;
+use SharedBundle\Tests\EventSourcing\AMetadataEnricher;
 use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
 use Symfony\Component\Config\Loader\LoaderInterface;
@@ -94,6 +95,13 @@ final class Kernel extends BaseKernel implements CompilerPassInterface
 
             $container
                 ->register(AQueryHandler::class, AQueryHandler::class)
+                ->setAutoconfigured(true)
+                ->setAutowired(true);
+
+            // A metadata enricher only needs to be registered and autoconfigured:
+            // the bundle collects it into the stream decorator by interface.
+            $container
+                ->register(AMetadataEnricher::class, AMetadataEnricher::class)
                 ->setAutoconfigured(true)
                 ->setAutowired(true);
         });

@@ -10,6 +10,10 @@ use Doctrine\DBAL\Types\Exception\InvalidType;
 use Doctrine\DBAL\Types\Type;
 use Shared\Domain\NotEmptyString;
 
+/**
+ * Doctrine DBAL type mapping the NotEmptyString value object to a column
+ * and back.
+ */
 final class NotEmptyStringType extends Type
 {
     public const string NAME = 'not_empty_string';

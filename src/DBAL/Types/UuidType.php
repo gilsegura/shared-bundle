@@ -10,6 +10,9 @@ use Doctrine\DBAL\Types\Exception\InvalidType;
 use Doctrine\DBAL\Types\Type;
 use Shared\Domain\Uuid;
 
+/**
+ * Doctrine DBAL type mapping the Uuid value object to a column and back.
+ */
 final class UuidType extends Type
 {
     public const string NAME = 'uuid';

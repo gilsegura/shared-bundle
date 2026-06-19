@@ -6,6 +6,11 @@ namespace SharedBundle\CommandHandling;
 
 use Symfony\Component\Messenger\Exception\HandlerFailedException;
 
+/**
+ * Unwraps Messenger's HandlerFailedException to rethrow the handler's
+ * original exception, so domain errors are not hidden behind the framework
+ * wrapper.
+ */
 trait UnwrapsHandlerFailureTrait
 {
     /**

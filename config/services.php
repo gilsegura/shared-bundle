@@ -52,6 +52,9 @@ return static function (ContainerConfigurator $container): void {
     $services->set(SimpleEventBus::class);
     $services->alias(EventBusInterface::class, SimpleEventBus::class);
 
+    // Enrichers carrying MetadataEnricherInterface are collected into this
+    // decorator by MetadataEnricherPass, which unpacks them into its variadic
+    // constructor.
     $services->set(MetadataEnrichingEventStreamDecorator::class);
     $services->alias(EventStreamDecoratorInterface::class, MetadataEnrichingEventStreamDecorator::class);
 

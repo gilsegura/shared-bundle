@@ -20,6 +20,10 @@ use SharedBundle\Persistence\Doctrine\Attribute\ObjectManager;
 use SharedBundle\Persistence\Doctrine\ObjectManagerException;
 
 /**
+ * Doctrine-backed event store. Loads and appends domain event streams and
+ * visits events for replay. Its constructor arguments come from the
+ * #[ObjectManager(DomainMessage::class)] attribute.
+ *
  * @template-extends AbstractObjectManager<int, DomainMessage>
  */
 #[ObjectManager(DomainMessage::class)]

@@ -9,6 +9,7 @@ use Doctrine\Bundle\DoctrineBundle\DoctrineBundle;
 use Shared\CommandHandling\CommandHandlerInterface;
 use Shared\CommandHandling\QueryHandlerInterface;
 use Shared\EventHandling\EventListenerInterface;
+use Shared\EventSourcing\MetadataEnricher\MetadataEnricherInterface;
 use SharedBundle\DBAL\Types\DateTimeImmutableType;
 use SharedBundle\DBAL\Types\EmailType;
 use SharedBundle\DBAL\Types\HashedPasswordType;
@@ -17,6 +18,7 @@ use SharedBundle\DBAL\Types\SerializableType;
 use SharedBundle\DBAL\Types\UuidType;
 use SharedBundle\DependencyInjection\AggregateRootPass;
 use SharedBundle\DependencyInjection\EventBusSubscriberPass;
+use SharedBundle\DependencyInjection\MetadataEnricherPass;
 use SharedBundle\DependencyInjection\ObjectManagerPass;
 use SharedBundle\EventHandling\UnwrapDomainMessageMiddleware;
 use SharedBundle\EventSourcing\Attribute\AggregateRoot;
@@ -27,6 +29,12 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 
+/**
+ * Symfony integration for the gilsegura/shared package: registers the
+ * command, query and async event buses, the Doctrine DBAL types, the event
+ * store mapping, and the attribute-driven wiring for repositories and
+ * object managers.
+ */
 final class SharedBundle extends AbstractBundle
 {
     /**
@@ -45,6 +53,12 @@ final class SharedBundle extends AbstractBundle
      * by the AggregateRootPass.
      */
     public const string AGGREGATE_ROOT_TAG = 'packages.shared.event_sourcing.aggregate_root';
+
+    /**
+     * Tag carried by every metadata enricher collected into the stream
+     * decorator that enriches outgoing events.
+     */
+    public const string METADATA_ENRICHER_TAG = 'packages.shared.event_sourcing.metadata_enricher';
 
     /**
      * Messenger bus ids the bundle defines and wires its services against.
@@ -93,6 +107,8 @@ final class SharedBundle extends AbstractBundle
             priority: 100,
         );
 
+        $container->addCompilerPass(new MetadataEnricherPass());
+
         $container->addCompilerPass(
             DoctrineOrmMappingsPass::createXmlMappingDriver([
                 $this->getPath().'/config/packages/doctrine/mapping' => 'Shared\Domain',
@@ -111,6 +127,12 @@ final class SharedBundle extends AbstractBundle
 
         $container->registerForAutoconfiguration(EventListenerInterface::class)
             ->addTag(self::EVENT_LISTENER_TAG);
+
+        // Metadata enrichers are collected by interface into the stream
+        // decorator, so an application enriches every event's metadata just by
+        // implementing MetadataEnricherInterface.
+        $container->registerForAutoconfiguration(MetadataEnricherInterface::class)
+            ->addTag(self::METADATA_ENRICHER_TAG);
 
         // Object managers carrying #[ObjectManager] get tagged so the pass can
         // inject the entity manager and the entity class-string from the

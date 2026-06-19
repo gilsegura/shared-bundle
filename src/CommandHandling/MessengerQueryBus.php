@@ -10,6 +10,11 @@ use Symfony\Component\Messenger\Exception\HandlerFailedException;
 use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Messenger\Stamp\HandledStamp;
 
+/**
+ * Query bus backed by Symfony Messenger. Dispatches a query, returns the
+ * handler's result and unwraps HandlerFailedException to the real domain
+ * exception.
+ */
 final readonly class MessengerQueryBus implements QueryBusInterface
 {
     use UnwrapsHandlerFailureTrait;

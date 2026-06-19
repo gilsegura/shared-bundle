@@ -10,6 +10,9 @@ use Doctrine\DBAL\Types\Exception\InvalidType;
 use Doctrine\DBAL\Types\Type;
 use Shared\Domain\Email;
 
+/**
+ * Doctrine DBAL type mapping the Email value object to a column and back.
+ */
 final class EmailType extends Type
 {
     public const string NAME = 'email';

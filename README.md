@@ -232,6 +232,39 @@ The store upcasts both when an aggregate is **loaded** and when its events are
 projector rebuilding a read model both see the current event shapes — a
 projector only needs an `applyXxx` for the latest shape.
 
+### Enriching event metadata
+
+Every event a repository saves passes through the stream decorator before being
+appended. The bundle wires `MetadataEnrichingEventStreamDecorator` as the
+decorator and collects metadata enrichers into it **by interface**, so an
+application adds ambient context (a correlation id, the current user, a request
+id) to every event just by implementing `MetadataEnricherInterface`:
+
+```php
+use Shared\Domain\Metadata;
+use Shared\EventSourcing\MetadataEnricher\MetadataEnricherInterface;
+
+final readonly class CorrelationIdEnricher implements MetadataEnricherInterface
+{
+    public function __construct(
+        private RequestContext $context,
+    ) {
+    }
+
+    public function enrich(Metadata $metadata): Metadata
+    {
+        return $metadata->merge(Metadata::kv('correlation_id', $this->context->correlationId()));
+    }
+}
+```
+
+No tags or configuration are needed — the bundle tags every
+`MetadataEnricherInterface` and injects them all into the decorator. Each
+enricher receives the metadata built so far and merges its own keys in; an
+enricher can depend on other services, since it is a regular service. Because
+`enrich` only sees the `Metadata`, it adds context ambient to the request, not
+data derived from the individual event.
+
 ### Replaying
 
 To rebuild a read model from the event store, visit its events and feed each one

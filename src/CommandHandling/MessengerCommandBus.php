@@ -9,6 +9,11 @@ use Shared\CommandHandling\CommandInterface;
 use Symfony\Component\Messenger\Exception\HandlerFailedException;
 use Symfony\Component\Messenger\MessageBusInterface;
 
+/**
+ * Command bus backed by Symfony Messenger. Dispatches a command and
+ * unwraps Messenger's HandlerFailedException so callers see the real
+ * domain exception.
+ */
 final readonly class MessengerCommandBus implements CommandBusInterface
 {
     use UnwrapsHandlerFailureTrait;

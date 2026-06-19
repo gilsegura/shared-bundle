@@ -6,6 +6,10 @@ namespace SharedBundle\DBAL;
 
 use Doctrine\DBAL\Connection;
 
+/**
+ * Invokable health check that reports whether the DBAL connection is
+ * reachable.
+ */
 final readonly class DBALHealthyConnection
 {
     public function __construct(

@@ -11,6 +11,10 @@ use Symfony\Component\Messenger\Middleware\StackInterface;
 use Symfony\Component\Messenger\Stamp\ReceivedStamp;
 use Symfony\Component\Messenger\Stamp\StampInterface;
 
+/**
+ * Messenger middleware on the async event bus that unwraps a DomainMessage
+ * and forwards its payload to the regular message handlers.
+ */
 final readonly class UnwrapDomainMessageMiddleware implements MiddlewareInterface
 {
     #[\Override]

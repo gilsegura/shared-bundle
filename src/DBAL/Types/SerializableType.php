@@ -13,6 +13,10 @@ use Doctrine\DBAL\Types\Type;
 use Serializer\SerializableInterface;
 use Serializer\Serializer;
 
+/**
+ * Doctrine DBAL type that serializes a SerializableInterface value to a
+ * column and rebuilds it on load.
+ */
 final class SerializableType extends Type
 {
     public const string NAME = 'serializable';

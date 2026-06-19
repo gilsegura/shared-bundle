@@ -10,6 +10,10 @@ use Doctrine\DBAL\Types\Exception\InvalidType;
 use Doctrine\DBAL\Types\Type;
 use Shared\Domain\HashedPassword;
 
+/**
+ * Doctrine DBAL type mapping the HashedPassword value object to a column
+ * and back.
+ */
 final class HashedPasswordType extends Type
 {
     public const string NAME = 'hashed_password';

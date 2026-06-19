@@ -6,6 +6,10 @@ namespace SharedBundle\CommandHandling;
 
 use Shared\Exception\InfrastructureException;
 
+/**
+ * Raised when a Messenger bus dispatch fails for a reason other than a
+ * handler's own exception.
+ */
 final class MessengerBusException extends InfrastructureException
 {
     public function __construct(

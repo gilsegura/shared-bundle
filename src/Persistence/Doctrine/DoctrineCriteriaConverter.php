@@ -8,6 +8,10 @@ use Doctrine\Common\Collections as Doctrine;
 use Shared\Criteria;
 use SharedBundle\Criteria\CriteriaConverterException;
 
+/**
+ * Translates the Shared\Criteria DSL into a Doctrine criteria so
+ * repositories query with the domain's own filter and sort objects.
+ */
 final readonly class DoctrineCriteriaConverter
 {
     public static function convert(

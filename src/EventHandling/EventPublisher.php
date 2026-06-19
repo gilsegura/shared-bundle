@@ -16,6 +16,11 @@ use Symfony\Component\Messenger\Exception\HandlerFailedException;
 use Symfony\Component\Messenger\Exception\NoHandlerForMessageException;
 use Symfony\Component\Messenger\MessageBusInterface;
 
+/**
+ * Bridges the synchronous domain event bus and the async Messenger bus. As
+ * a domain event listener it collects published messages, and on
+ * kernel/console/worker shutdown it dispatches them to the async bus.
+ */
 final class EventPublisher implements EventSubscriberInterface, EventListenerInterface
 {
     use UnwrapsHandlerFailureTrait;

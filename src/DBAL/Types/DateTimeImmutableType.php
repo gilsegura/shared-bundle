@@ -10,6 +10,10 @@ use Doctrine\DBAL\Types\Exception\InvalidType;
 use Doctrine\DBAL\Types\Type;
 use Shared\Domain\DateTimeImmutable;
 
+/**
+ * Doctrine DBAL type mapping the DateTimeImmutable value object to a
+ * column and back.
+ */
 final class DateTimeImmutableType extends Type
 {
     public const string NAME = 'datetime_immutable';
