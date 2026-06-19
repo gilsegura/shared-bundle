@@ -14,7 +14,7 @@ return $config
     ->setRiskyAllowed(true)
     ->setRules([
         '@PSR12' => true,
-        '@PHP8x5Migration' => true,
+        '@PHP8x4Migration' => true,
         '@Symfony' => true,
 
         'declare_strict_types' => true,

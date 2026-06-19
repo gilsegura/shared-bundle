@@ -7,6 +7,7 @@
     <entity name="Shared\Domain\DomainMessage" table="domain_messages">
         <id name="id" column="id" type="uuid"/>
         <id name="playhead" column="playhead" type="integer"/>
+        <field name="type" column="type" type="string"/>
         <field name="metadata" column="metadata" type="serializable"/>
         <field name="payload" column="payload" type="serializable"/>
         <field name="recordedAt" column="recorded_at" type="datetime_immutable"/>

@@ -8,6 +8,8 @@ use Shared\EventHandling\EventBusInterface;
 use Shared\EventSourcing\AbstractEventSourcingRepository;
 use Shared\EventSourcing\EventStreamDecoratorInterface;
 use Shared\EventSourcing\Factory\PublicConstructorAggregateRootFactory;
+use Shared\Upcasting\SequentialUpcasterChain;
+use Shared\Upcasting\UpcastingEventStore;
 use SharedBundle\EventSourcing\Attribute\AggregateRoot;
 use SharedBundle\EventStore\DoctrineEventStore;
 use SharedBundle\SharedBundle;
@@ -18,10 +20,16 @@ use Symfony\Component\DependencyInjection\Reference;
 
 /**
  * Wires every repository carrying #[AggregateRoot]. The attribute names the
- * aggregate; this pass supplies the four constructor arguments of
- * AbstractEventSourcingRepository — the event store, event bus and stream
- * decorator as references, plus a PublicConstructorAggregateRootFactory built
- * inline for the aggregate — so the repository needs no constructor.
+ * aggregate and the ordered upcaster sequence; this pass supplies the four
+ * constructor arguments of AbstractEventSourcingRepository:
+ *
+ *  - the event store, always an UpcastingEventStore wrapping the DoctrineEventStore
+ *    with a SequentialUpcasterChain built from the declared upcasters (an empty
+ *    chain passes events through unchanged);
+ *  - the event bus and the stream decorator, as service references;
+ *  - a PublicConstructorAggregateRootFactory built inline for the aggregate.
+ *
+ * So the repository needs no constructor.
  */
 final class AggregateRootPass implements CompilerPassInterface
 {
@@ -46,20 +54,34 @@ final class AggregateRootPass implements CompilerPassInterface
                 throw new \InvalidArgumentException(\sprintf('Service "%s" is tagged "%s" but has no #[AggregateRoot] attribute.', $id, SharedBundle::AGGREGATE_ROOT_TAG));
             }
 
-            $aggregateRoot = $attributes[0]->newInstance()->aggregateRoot;
+            $attribute = $attributes[0]->newInstance();
 
-            // The factory is built inline from the aggregate class-string — no
-            // per-aggregate factory service is registered.
+            // The upcaster sequence, in declared order, each referenced as a
+            // service so it can carry its own dependencies.
+            $upcasters = array_map(
+                static fn (string $upcaster): Reference => new Reference($upcaster),
+                $attribute->upcasters,
+            );
+
+            $chain = new Definition(SequentialUpcasterChain::class)
+                ->setArguments($upcasters);
+
+            // The event store is always an UpcastingEventStore wrapping the
+            // Doctrine one; with an empty chain it is a no-op pass-through.
+            $eventStore = new Definition(UpcastingEventStore::class)
+                ->setArguments([
+                    new Reference(DoctrineEventStore::class),
+                    $chain,
+                ]);
+
+            // The aggregate factory is built inline from the aggregate class.
             $factory = new Definition(PublicConstructorAggregateRootFactory::class)
-                ->setArguments([$aggregateRoot]);
+                ->setArguments([$attribute->aggregateRoot]);
 
-            // Fix the four constructor arguments and turn autowiring off: the
-            // three dependencies are referenced explicitly and the factory is an
-            // inline definition, so autowiring must not try to resolve them.
             $definition
                 ->setAutowired(false)
                 ->setArguments([
-                    new Reference(DoctrineEventStore::class),
+                    $eventStore,
                     new Reference(EventBusInterface::class),
                     new Reference(EventStreamDecoratorInterface::class),
                     $factory,

@@ -41,11 +41,11 @@ process out of band to a transport:
 ```yaml
 # config/packages/messenger.yaml
 framework:
-  messenger:
-    transports:
-      async: '%env(MESSENGER_TRANSPORT_DSN)%'
-    routing:
-      'Shared\Domain\DomainMessage': async
+   messenger:
+      transports:
+         async: '%env(MESSENGER_TRANSPORT_DSN)%'
+      routing:
+         'Shared\Domain\DomainMessage': async
 ```
 
 **2. A configured Doctrine connection.** The command bus runs inside a
@@ -131,7 +131,25 @@ about:
 ```php
 use Shared\ReadModel\AbstractProjector;
 
-final readonly class UserProjector extends AbstractProjector {...}
+final readonly class UserProjector extends AbstractProjector
+{
+    public function __construct(
+        private UserReadModelRepositoryInterface $users,
+    ) {
+    }
+
+    protected function applyUserWasCreated(UserWasCreated $event): void
+    {
+        $this->users->save(User::deserialize($event->serialize()));
+    }
+
+    protected function applyUserEmailWasChanged(UserEmailWasChanged $event): void
+    {
+        $user = $this->users->oneOrException($event->id);
+        $user->changeEmail($event->email);
+        $this->users->save($user);
+    }
+}
 ```
 
 Events with no matching `applyXxx` method are simply ignored, so each projector
@@ -192,6 +210,58 @@ final readonly class UserRepository extends AbstractEventSourcingRepository
 }
 ```
 
+The event store is always a `UpcastingEventStore` wrapping the Doctrine store, so
+old event shapes can be upcast as they are read. With no upcasters declared the
+chain is empty and events pass through unchanged. To evolve an event, declare the
+ordered upcaster sequence on the attribute — the array order is the order of the
+chain, and each upcaster receives the output of the previous one:
+
+```php
+#[AggregateRoot(User::class, upcasters: [UserV1ToV2Upcaster::class, UserV2ToV3Upcaster::class])]
+final readonly class UserRepository extends AbstractEventSourcingRepository
+    implements UserRepositoryInterface { ... }
+```
+
+Each upcaster is a service implementing `Shared\Upcasting\UpcasterInterface`; it
+returns the message unchanged when the event is not its concern, or a new
+`DomainMessage` with the transformed payload when it is. Because upcasters are
+services, they can carry their own dependencies.
+
+The store upcasts both when an aggregate is **loaded** and when its events are
+**visited** for replay, so the write side rehydrating an aggregate and a
+projector rebuilding a read model both see the current event shapes — a
+projector only needs an `applyXxx` for the latest shape.
+
+### Replaying
+
+To rebuild a read model from the event store, visit its events and feed each one
+to the projector. `Shared\Replaying\Replayer` takes the event store manager and
+an event visitor; a `CallableEventVisitor` forwards every `DomainMessage` to the
+projector (an `EventListenerInterface`):
+
+```php
+use Shared\Criteria;
+use Shared\Domain\DomainMessage;
+use Shared\EventStore\CallableEventVisitor;
+use Shared\EventStore\EventStoreManagerInterface;
+use Shared\Replaying\Replayer;
+
+$replayer = new Replayer(
+    $eventStore,                                  // EventStoreManagerInterface
+    new CallableEventVisitor(
+        fn (DomainMessage $message) => ($projector)($message),
+    ),
+);
+
+$replayer(new Criteria\AndX());                        // all events
+$replayer(new Criteria\AndX(new Criteria\EqId($id)));  // one aggregate
+```
+
+An empty `Criteria\AndX` replays every event; `Criteria\EqId` narrows it to a
+single aggregate (the `id` on a `DomainMessage` is the aggregate's id). When the
+event store is the bundle's upcasting store, the visited events are upcast just
+like a load, so the projector sees the current shapes.
+
 ### Criteria converter
 
 `DoctrineCriteriaConverter` translates the `Shared\Criteria` DSL into a Doctrine
@@ -204,5 +274,4 @@ instead of Doctrine-specific expressions.
 is reachable — useful behind a health-check endpoint.
 
 ## License
-
 MIT. See [LICENSE](LICENSE).

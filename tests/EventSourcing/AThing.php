@@ -16,6 +16,6 @@ final class AThing extends AbstractEventSourcedAggregateRoot
     #[\Override]
     public function id(): Uuid
     {
-        return Uuid::uuid4();
+        return new Uuid('9db0db88-3e44-4d2b-b46f-9ca547de06ac');
     }
 }
