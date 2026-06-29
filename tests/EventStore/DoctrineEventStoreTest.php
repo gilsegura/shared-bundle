@@ -47,13 +47,18 @@ final class DoctrineEventStoreTest extends KernelTestCase
         $eventStore->load(new Uuid('9db0db88-3e44-4d2b-b46f-9ca547de06ac'));
     }
 
-    public function test_must_throw_stream_not_found_exception_when_load_stream_from_playhead(): void
+    public function test_must_return_an_empty_stream_when_loading_from_a_playhead_with_no_later_events(): void
     {
-        self::expectException(StreamNotFoundException::class);
-
         /** @var DoctrineEventStore $eventStore */
         $eventStore = self::getContainer()->get(DoctrineEventStore::class);
-        $eventStore->load(new Uuid('9db0db88-3e44-4d2b-b46f-9ca547de06ac'), 0);
+
+        // Loading from a playhead is a range read used to resume after a
+        // snapshot: an empty result is not an error, it simply means there are
+        // no later events to replay.
+        $stream = $eventStore->load(new Uuid('9db0db88-3e44-4d2b-b46f-9ca547de06ac'), 0);
+
+        self::assertInstanceOf(DomainEventStream::class, $stream);
+        self::assertSame([], $stream->messages);
     }
 
     public function test_must_throw_playhead_already_exists_exception_when_append_stream(): void

@@ -10,6 +10,7 @@ use Shared\CommandHandling\CommandHandlerInterface;
 use Shared\CommandHandling\QueryHandlerInterface;
 use Shared\EventHandling\EventListenerInterface;
 use Shared\EventSourcing\MetadataEnricher\MetadataEnricherInterface;
+use SharedBundle\DBAL\Types\AggregateRootType;
 use SharedBundle\DBAL\Types\DateTimeImmutableType;
 use SharedBundle\DBAL\Types\EmailType;
 use SharedBundle\DBAL\Types\HashedPasswordType;
@@ -111,7 +112,7 @@ final class SharedBundle extends AbstractBundle
 
         $container->addCompilerPass(
             DoctrineOrmMappingsPass::createXmlMappingDriver([
-                $this->getPath().'/config/packages/doctrine/mapping' => 'Shared\Domain',
+                $this->getPath().'/config/packages/doctrine/mapping' => 'Shared',
             ])
         );
 
@@ -175,6 +176,7 @@ final class SharedBundle extends AbstractBundle
         $builder->prependExtensionConfig('doctrine', [
             'dbal' => [
                 'types' => [
+                    AggregateRootType::NAME => AggregateRootType::class,
                     DateTimeImmutableType::NAME => DateTimeImmutableType::class,
                     EmailType::NAME => EmailType::class,
                     HashedPasswordType::NAME => HashedPasswordType::class,

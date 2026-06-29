@@ -42,7 +42,7 @@ final readonly class DoctrineEventStore extends AbstractObjectManager implements
                 new Criteria\OrderX(new Criteria\ByPlayhead(Criteria\Expr\Order::ASC))
             );
         } catch (ObjectManagerException $e) {
-            throw EventStoreException::throwable($e);
+            throw EventStoreException::fromThrowable($e);
         }
 
         if ([] === $messages) {
@@ -53,8 +53,12 @@ final readonly class DoctrineEventStore extends AbstractObjectManager implements
     }
 
     /**
+     * Loads the events recorded from the given playhead onward (inclusive), in
+     * order. Unlike a full load, an empty result is not an error: an aggregate
+     * whose snapshot is already at the latest position simply has no later
+     * events to replay.
+     *
      * @throws EventStoreException
-     * @throws StreamNotFoundException
      */
     private function loadFromPlayhead(Uuid $id, int $playhead): DomainEventStream
     {
@@ -62,16 +66,12 @@ final readonly class DoctrineEventStore extends AbstractObjectManager implements
             $messages = $this->search(
                 new Criteria\AndX(
                     new Criteria\EqId($id),
-                    new Criteria\EqPlayhead($playhead)
+                    new Criteria\GtePlayhead($playhead)
                 ),
                 new Criteria\OrderX(new Criteria\ByPlayhead(Criteria\Expr\Order::ASC))
             );
         } catch (ObjectManagerException $e) {
-            throw EventStoreException::throwable($e);
-        }
-
-        if ([] === $messages) {
-            throw StreamNotFoundException::playhead($id, $playhead);
+            throw EventStoreException::fromThrowable($e);
         }
 
         return new DomainEventStream(...$messages);
@@ -88,7 +88,7 @@ final readonly class DoctrineEventStore extends AbstractObjectManager implements
                     throw StreamAlreadyExistsException::playhead($message->id, $message->playhead);
                 }
 
-                throw EventStoreException::throwable($e);
+                throw EventStoreException::fromThrowable($e);
             }
         }
     }
@@ -102,7 +102,7 @@ final readonly class DoctrineEventStore extends AbstractObjectManager implements
                 new Criteria\OrderX(new Criteria\ByRecordedAt(Criteria\Expr\Order::ASC))
             );
         } catch (ObjectManagerException $e) {
-            throw EventStoreException::throwable($e);
+            throw EventStoreException::fromThrowable($e);
         }
 
         foreach ($messages as $message) {

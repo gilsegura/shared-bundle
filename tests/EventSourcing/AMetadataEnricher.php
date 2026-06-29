@@ -14,7 +14,7 @@ use Shared\EventSourcing\MetadataEnricher\MetadataEnricherInterface;
 final readonly class AMetadataEnricher implements MetadataEnricherInterface
 {
     #[\Override]
-    public function enrich(Metadata $metadata): Metadata
+    public function __invoke(Metadata $metadata): Metadata
     {
         return $metadata->merge(Metadata::kv('enriched_by', self::class));
     }

@@ -8,11 +8,18 @@ use Shared\EventHandling\EventBusInterface;
 use Shared\EventSourcing\AbstractEventSourcingRepository;
 use Shared\EventSourcing\EventStreamDecoratorInterface;
 use Shared\EventSourcing\Factory\PublicConstructorAggregateRootFactory;
+use Shared\EventSourcing\Loader\EventStoreAggregateRootLoader;
+use Shared\EventSourcing\Register\EventStoreAggregateRootRegister;
+use Shared\Snapshotting\EventCountSnapshotStrategy;
+use Shared\Snapshotting\SnapshotAggregateRootLoader;
+use Shared\Snapshotting\SnapshotAggregateRootRegister;
 use Shared\Upcasting\SequentialUpcasterChain;
 use Shared\Upcasting\UpcastingEventStore;
 use SharedBundle\EventSourcing\Attribute\AggregateRoot;
+use SharedBundle\EventSourcing\Attribute\SnapshotConfig;
 use SharedBundle\EventStore\DoctrineEventStore;
 use SharedBundle\SharedBundle;
+use SharedBundle\Snapshotting\DoctrineSnapshotStore;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
@@ -20,16 +27,19 @@ use Symfony\Component\DependencyInjection\Reference;
 
 /**
  * Wires every repository carrying #[AggregateRoot]. The attribute names the
- * aggregate and the ordered upcaster sequence; this pass supplies the four
- * constructor arguments of AbstractEventSourcingRepository:
+ * aggregate, the ordered upcaster sequence and an optional snapshot policy; this
+ * pass supplies the two constructor arguments of AbstractEventSourcingRepository:
  *
- *  - the event store, always an UpcastingEventStore wrapping the DoctrineEventStore
- *    with a SequentialUpcasterChain built from the declared upcasters (an empty
- *    chain passes events through unchanged);
- *  - the event bus and the stream decorator, as service references;
- *  - a PublicConstructorAggregateRootFactory built inline for the aggregate.
+ *  - the loader: an EventStoreAggregateRootLoader over the event store and an
+ *    inline factory, decorated with a SnapshotAggregateRootLoader when snapshot
+ *    is configured;
+ *  - the register: an EventStoreAggregateRootRegister over the event store, event
+ *    bus and stream decorator, decorated with a SnapshotAggregateRootRegister
+ *    when snapshot is configured.
  *
- * So the repository needs no constructor.
+ * The event store is always an UpcastingEventStore wrapping the DoctrineEventStore
+ * with a SequentialUpcasterChain built from the declared upcasters (an empty
+ * chain passes events through unchanged). So the repository needs no constructor.
  */
 final class AggregateRootPass implements CompilerPassInterface
 {
@@ -67,25 +77,60 @@ final class AggregateRootPass implements CompilerPassInterface
                 ->setArguments($upcasters);
 
             // The event store is always an UpcastingEventStore wrapping the
-            // Doctrine one; with an empty chain it is a no-op pass-through.
+            // Doctrine one; with an empty chain it is a no-op pass-through. It is
+            // stateless, so the same inline definition is reused on both seams.
             $eventStore = new Definition(UpcastingEventStore::class)
                 ->setArguments([
                     new Reference(DoctrineEventStore::class),
                     $chain,
                 ]);
 
-            // The aggregate factory is built inline from the aggregate class.
-            $factory = new Definition(PublicConstructorAggregateRootFactory::class)
-                ->setArguments([$attribute->aggregateRoot]);
+            // Read seam: the base loader over the event store and an inline
+            // factory, decorated by snapshotting when configured.
+            $loader = new Definition(EventStoreAggregateRootLoader::class)
+                ->setArguments([
+                    $eventStore,
+                    new Definition(PublicConstructorAggregateRootFactory::class)
+                        ->setArguments([$attribute->aggregateRoot]),
+                ]);
 
-            $definition
-                ->setAutowired(false)
+            // Write seam: the base register over the event store, event bus and
+            // stream decorator, decorated by snapshotting when configured.
+            $register = new Definition(EventStoreAggregateRootRegister::class)
                 ->setArguments([
                     $eventStore,
                     new Reference(EventBusInterface::class),
                     new Reference(EventStreamDecoratorInterface::class),
-                    $factory,
                 ]);
+
+            if ($attribute->snapshot instanceof SnapshotConfig) {
+                $snapshotStore = new Reference(DoctrineSnapshotStore::class);
+                $strategy = $this->strategy($attribute->snapshot);
+
+                $loader = new Definition(SnapshotAggregateRootLoader::class)
+                    ->setArguments([$loader, $eventStore, $snapshotStore]);
+
+                $register = new Definition(SnapshotAggregateRootRegister::class)
+                    ->setArguments([$register, $snapshotStore, $strategy]);
+            }
+
+            $definition
+                ->setAutowired(false)
+                ->setArguments([$loader, $register]);
         }
+    }
+
+    /**
+     * Builds the snapshot strategy: a referenced custom strategy service when one
+     * is named, otherwise an inline event-count strategy.
+     */
+    private function strategy(SnapshotConfig $config): Definition|Reference
+    {
+        if (null !== $config->strategy) {
+            return new Reference($config->strategy);
+        }
+
+        return new Definition(EventCountSnapshotStrategy::class)
+            ->setArguments([$config->every]);
     }
 }

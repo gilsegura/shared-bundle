@@ -8,14 +8,21 @@ use PHPUnit\Framework\TestCase;
 use Shared\EventHandling\EventBusInterface;
 use Shared\EventSourcing\EventStreamDecoratorInterface;
 use Shared\EventSourcing\Factory\PublicConstructorAggregateRootFactory;
+use Shared\EventSourcing\Loader\EventStoreAggregateRootLoader;
+use Shared\EventSourcing\Register\EventStoreAggregateRootRegister;
+use Shared\Snapshotting\EventCountSnapshotStrategy;
+use Shared\Snapshotting\SnapshotAggregateRootLoader;
+use Shared\Snapshotting\SnapshotAggregateRootRegister;
 use Shared\Upcasting\SequentialUpcasterChain;
 use Shared\Upcasting\UpcastingEventStore;
 use SharedBundle\DependencyInjection\AggregateRootPass;
 use SharedBundle\EventStore\DoctrineEventStore;
 use SharedBundle\SharedBundle;
+use SharedBundle\Snapshotting\DoctrineSnapshotStore;
 use SharedBundle\Tests\EventSourcing\AThing;
 use SharedBundle\Tests\EventSourcing\AThingRepository;
 use SharedBundle\Tests\EventSourcing\AThingUpcaster;
+use SharedBundle\Tests\EventSourcing\AThingWithSnapshotRepository;
 use SharedBundle\Tests\EventSourcing\AThingWithUpcastersRepository;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
@@ -29,21 +36,16 @@ final class AggregateRootPassTest extends TestCase
     {
         $this->container = new ContainerBuilder();
 
-        // The pass references services by id; register synthetic stubs so the
-        // container resolves them when it compiles (this is a unit test on the
-        // pass, not the full integration).
-        foreach ([DoctrineEventStore::class, EventBusInterface::class, EventStreamDecoratorInterface::class] as $service) {
+        foreach ([DoctrineEventStore::class, DoctrineSnapshotStore::class, EventBusInterface::class, EventStreamDecoratorInterface::class] as $service) {
             $this->container->setDefinition($service, new Definition($service)->setSynthetic(true));
         }
 
-        // The upcaster is referenced by the chain, so it must exist as a service.
         $this->container->setDefinition(AThingUpcaster::class, new Definition(AThingUpcaster::class));
     }
 
     private function compile(): void
     {
-        $this->container->addCompilerPass(new AggregateRootPass());
-        $this->container->compile();
+        new AggregateRootPass()->process($this->container);
     }
 
     public function test_must_throw_when_service_does_not_extend_abstract_event_sourcing_repository(): void
@@ -59,7 +61,7 @@ final class AggregateRootPassTest extends TestCase
         $this->compile();
     }
 
-    public function test_must_wrap_the_event_store_in_an_upcasting_store_with_an_empty_chain(): void
+    public function test_must_wire_a_loader_and_a_register_without_snapshot(): void
     {
         $this->register(AThingRepository::class);
 
@@ -67,17 +69,32 @@ final class AggregateRootPassTest extends TestCase
 
         $arguments = $this->container->getDefinition(AThingRepository::class)->getArguments();
 
-        // First argument: an UpcastingEventStore wrapping the Doctrine store and
-        // an empty SequentialUpcasterChain.
-        $eventStore = $arguments[0];
-        self::assertInstanceOf(Definition::class, $eventStore);
-        self::assertSame(UpcastingEventStore::class, $eventStore->getClass());
-        self::assertEquals(new Reference(DoctrineEventStore::class), $eventStore->getArgument(0));
+        // First argument: the base loader over the event store and an inline factory.
+        $loader = $arguments[0];
+        self::assertInstanceOf(Definition::class, $loader);
+        self::assertSame(EventStoreAggregateRootLoader::class, $loader->getClass());
 
-        $chain = $eventStore->getArgument(1);
-        self::assertInstanceOf(Definition::class, $chain);
-        self::assertSame(SequentialUpcasterChain::class, $chain->getClass());
-        self::assertSame([], $chain->getArguments());
+        $factory = $loader->getArgument(1);
+        self::assertInstanceOf(Definition::class, $factory);
+        self::assertSame(PublicConstructorAggregateRootFactory::class, $factory->getClass());
+        self::assertSame(AThing::class, $factory->getArgument(0));
+
+        // Second argument: the base register over the event store, bus and decorator.
+        $register = $arguments[1];
+        self::assertInstanceOf(Definition::class, $register);
+        self::assertSame(EventStoreAggregateRootRegister::class, $register->getClass());
+        self::assertEquals(new Reference(EventBusInterface::class), $register->getArgument(1));
+        self::assertEquals(new Reference(EventStreamDecoratorInterface::class), $register->getArgument(2));
+
+        // Both seams wrap the same kind of event store: an UpcastingEventStore.
+        $loaderEventStore = $loader->getArgument(0);
+        self::assertInstanceOf(Definition::class, $loaderEventStore);
+        self::assertSame(UpcastingEventStore::class, $loaderEventStore->getClass());
+        self::assertEquals(new Reference(DoctrineEventStore::class), $loaderEventStore->getArgument(0));
+
+        $registerEventStore = $register->getArgument(0);
+        self::assertInstanceOf(Definition::class, $registerEventStore);
+        self::assertSame(UpcastingEventStore::class, $registerEventStore->getClass());
     }
 
     public function test_must_build_the_chain_with_the_declared_upcaster_sequence(): void
@@ -88,38 +105,65 @@ final class AggregateRootPassTest extends TestCase
 
         $arguments = $this->container->getDefinition(AThingWithUpcastersRepository::class)->getArguments();
 
-        $eventStore = $arguments[0];
+        $loader = $arguments[0];
+        self::assertInstanceOf(Definition::class, $loader);
+
+        $eventStore = $loader->getArgument(0);
         self::assertInstanceOf(Definition::class, $eventStore);
 
         $chain = $eventStore->getArgument(1);
         self::assertInstanceOf(Definition::class, $chain);
+        self::assertSame(SequentialUpcasterChain::class, $chain->getClass());
 
-        // After compilation the container resolves the Reference into the
-        // upcaster's Definition; assert the declared upcaster is the single
-        // entry in the chain.
         $upcasters = $chain->getArguments();
         self::assertCount(1, $upcasters);
-        self::assertInstanceOf(Definition::class, $upcasters[0]);
-        self::assertSame(AThingUpcaster::class, $upcasters[0]->getClass());
+        self::assertEquals(new Reference(AThingUpcaster::class), $upcasters[0]);
     }
 
-    public function test_must_inject_bus_decorator_and_factory(): void
+    public function test_must_not_be_autowired(): void
     {
         $this->register(AThingRepository::class);
 
         $this->compile();
 
-        $wired = $this->container->getDefinition(AThingRepository::class);
-        $arguments = $wired->getArguments();
+        self::assertFalse($this->container->getDefinition(AThingRepository::class)->isAutowired());
+    }
 
-        self::assertFalse($wired->isAutowired());
-        self::assertEquals(new Reference(EventBusInterface::class), $arguments[1]);
-        self::assertEquals(new Reference(EventStreamDecoratorInterface::class), $arguments[2]);
+    public function test_must_decorate_both_seams_with_snapshotting_when_configured(): void
+    {
+        $this->register(AThingWithSnapshotRepository::class);
 
-        $factory = $arguments[3];
-        self::assertInstanceOf(Definition::class, $factory);
-        self::assertSame(PublicConstructorAggregateRootFactory::class, $factory->getClass());
-        self::assertSame(AThing::class, $factory->getArgument(0));
+        $this->compile();
+
+        $arguments = $this->container->getDefinition(AThingWithSnapshotRepository::class)->getArguments();
+
+        // Read seam decorated by the snapshot loader, wrapping the base loader.
+        $loader = $arguments[0];
+        self::assertInstanceOf(Definition::class, $loader);
+        self::assertSame(SnapshotAggregateRootLoader::class, $loader->getClass());
+
+        $innerLoader = $loader->getArgument(0);
+        self::assertInstanceOf(Definition::class, $innerLoader);
+        self::assertSame(EventStoreAggregateRootLoader::class, $innerLoader->getClass());
+
+        self::assertEquals(new Reference(DoctrineSnapshotStore::class), $loader->getArgument(2));
+
+        // Write seam decorated by the snapshot register, wrapping the base register.
+        $register = $arguments[1];
+        self::assertInstanceOf(Definition::class, $register);
+        self::assertSame(SnapshotAggregateRootRegister::class, $register->getClass());
+
+        $innerRegister = $register->getArgument(0);
+        self::assertInstanceOf(Definition::class, $innerRegister);
+        self::assertSame(EventStoreAggregateRootRegister::class, $innerRegister->getClass());
+
+        self::assertEquals(new Reference(DoctrineSnapshotStore::class), $register->getArgument(1));
+
+        // The strategy is an inline event-count strategy with the configured count.
+        $strategy = $register->getArgument(2);
+        self::assertInstanceOf(Definition::class, $strategy);
+        self::assertSame(EventCountSnapshotStrategy::class, $strategy->getClass());
+        self::assertSame(100, $strategy->getArgument(0));
     }
 
     /**

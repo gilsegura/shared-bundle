@@ -12,6 +12,7 @@ use SharedBundle\CommandHandling\MessengerQueryBus;
 use SharedBundle\DBAL\DBALHealthyConnection;
 use SharedBundle\EventStore\DoctrineEventStore;
 use SharedBundle\SharedBundle;
+use SharedBundle\Snapshotting\DoctrineSnapshotStore;
 use SharedBundle\Tests\CommandHandling\ACommandHandler;
 use SharedBundle\Tests\CommandHandling\AQueryHandler;
 use SharedBundle\Tests\CommandHandling\ThrowableCommandHandler;
@@ -48,6 +49,7 @@ final class Kernel extends BaseKernel implements CompilerPassInterface
         $container->findDefinition(MetadataEnrichingEventStreamDecorator::class)->setPublic(true);
 
         $container->findDefinition(DoctrineEventStore::class)->setPublic(true);
+        $container->findDefinition(DoctrineSnapshotStore::class)->setPublic(true);
         $container->findDefinition(DBALHealthyConnection::class)->setPublic(true);
     }
 

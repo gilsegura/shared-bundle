@@ -18,6 +18,7 @@ use SharedBundle\DBAL\DBALHealthyConnection;
 use SharedBundle\EventHandling\EventPublisher;
 use SharedBundle\EventHandling\UnwrapDomainMessageMiddleware;
 use SharedBundle\EventStore\DoctrineEventStore;
+use SharedBundle\Snapshotting\DoctrineSnapshotStore;
 use SharedBundle\SharedBundle;
 
 return static function (ContainerConfigurator $container): void {
@@ -64,4 +65,11 @@ return static function (ContainerConfigurator $container): void {
     $services->set(DoctrineEventStore::class);
     $services->alias(EventStoreInterface::class, DoctrineEventStore::class);
     $services->alias(EventStoreManagerInterface::class, DoctrineEventStore::class);
+
+    // SNAPSHOT STORE
+    // Constructor arguments are injected by ObjectManagerPass from the
+    // #[ObjectManager(Snapshot::class)] attribute on the class. The
+    // AggregateRootPass references it when an aggregate declares a snapshot
+    // policy.
+    $services->set(DoctrineSnapshotStore::class);
 };
