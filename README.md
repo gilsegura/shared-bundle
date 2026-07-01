@@ -123,13 +123,13 @@ flushes them to the async bus when the process winds down).
 
 Any service implementing `EventListenerInterface` is collected onto the
 `SimpleEventBus` by a compiler pass. In practice a read-model projector extends
-`Shared\ReadModel\AbstractProjector`, which implements that interface and
+`Shared\Projection\AbstractProjector`, which implements that interface and
 resolves an `applyXxx` method from each event's short name (the same convention
 aggregates use), so a projector only writes the handlers for the events it cares
 about:
 
 ```php
-use Shared\ReadModel\AbstractProjector;
+use Shared\Projection\AbstractProjector;
 
 final readonly class UserProjector extends AbstractProjector
 {
@@ -161,8 +161,9 @@ extra configuration.
 
 Custom DBAL types map the shared value objects to columns and back, registered
 automatically: `Uuid`, `Email`, `HashedPassword`, `NotEmptyString`,
-`Serializable` and `DateTimeImmutable`. Use them as column types in the
-application's Doctrine mappings.
+`Serializable` and `DateTimeImmutable`, plus `aggregate_root`, which stores a
+whole aggregate as an opaque blob (native serialize) for snapshots. Use them as
+column types in the application's Doctrine mappings.
 
 ### Event store
 
@@ -192,9 +193,10 @@ final readonly class UserReadModelRepository extends AbstractObjectManager
 ### Event-sourced repositories
 
 A write-side repository extends `AbstractEventSourcingRepository` and declares
-its aggregate with `#[AggregateRoot]`. The bundle injects the event store, the
-event bus, the stream decorator and an aggregate factory built for that class,
-so the repository has no constructor:
+its aggregate with `#[AggregateRoot]`. The bundle injects the two seams the
+repository delegates to — a **loader** (reads and rebuilds the aggregate) and a
+**register** (appends its events and publishes them) — each built for that
+class, so the repository has no constructor:
 
 ```php
 use Shared\EventSourcing\AbstractEventSourcingRepository;
@@ -205,16 +207,17 @@ use SharedBundle\EventSourcing\Attribute\AggregateRoot;
 final readonly class UserRepository extends AbstractEventSourcingRepository
     implements UserRepositoryInterface
 {
-    public function get(Uuid $id, ?int $playhead = null): User { ... }
+    public function get(Uuid $id): User { return $this->load($id); }
     public function store(User $user): void { $this->save($user); }
 }
 ```
 
-The event store is always a `UpcastingEventStore` wrapping the Doctrine store, so
-old event shapes can be upcast as they are read. With no upcasters declared the
-chain is empty and events pass through unchanged. To evolve an event, declare the
-ordered upcaster sequence on the attribute — the array order is the order of the
-chain, and each upcaster receives the output of the previous one:
+The event store is always a `UpcastingEventStore` wrapping the Doctrine store,
+shared by both seams, so old event shapes can be upcast as they are read. With no
+upcasters declared the chain is empty and events pass through unchanged. To
+evolve an event, declare the ordered upcaster sequence on the attribute — the
+array order is the order of the chain, and each upcaster receives the output of
+the previous one:
 
 ```php
 #[AggregateRoot(User::class, upcasters: [UserV1ToV2Upcaster::class, UserV2ToV3Upcaster::class])]
@@ -231,6 +234,38 @@ The store upcasts both when an aggregate is **loaded** and when its events are
 **visited** for replay, so the write side rehydrating an aggregate and a
 projector rebuilding a read model both see the current event shapes — a
 projector only needs an `applyXxx` for the latest shape.
+
+### Snapshotting
+
+For long-lived aggregates, snapshotting avoids replaying the whole history on
+load. It is opt-in per aggregate through the `snapshot` argument of
+`#[AggregateRoot]`, which takes a `SnapshotConfig`:
+
+```php
+use SharedBundle\EventSourcing\Attribute\AggregateRoot;
+use SharedBundle\EventSourcing\Attribute\SnapshotConfig;
+
+/** @template-extends AbstractEventSourcingRepository<User> */
+#[AggregateRoot(User::class, snapshot: new SnapshotConfig(every: 100))]
+final readonly class UserRepository extends AbstractEventSourcingRepository
+    implements UserRepositoryInterface { ... }
+```
+
+When configured, the bundle decorates **both** seams: the loader is wrapped so a
+load resumes from the latest snapshot and replays only the events recorded after
+it, and the register is wrapped so a save captures a snapshot once the policy is
+due. `SnapshotConfig` declares the policy — `every: N` builds an event-count
+strategy that snapshots every N events, or `strategy:` names a custom
+`Shared\Snapshotting\SnapshotStrategyInterface` service instead. With no
+`snapshot` declared, neither seam is decorated and behaviour is unchanged.
+
+Snapshots are persisted by `DoctrineSnapshotStore` in a single `snapshots` table,
+one row per aggregate id (the latest). The aggregate is stored through the
+`aggregate_root` DBAL type, so it needs no knowledge of snapshotting; a snapshot
+that cannot be restored is treated as corrupt and the load falls back to a full
+replay. Because the aggregate is captured with native serialize, a change to its
+internal shape invalidates older snapshots — which is safe, as they are simply
+rebuilt from events.
 
 ### Enriching event metadata
 

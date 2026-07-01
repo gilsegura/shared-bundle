@@ -8,6 +8,7 @@ use Doctrine\Common\Collections\Selectable;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ObjectRepository;
 use Shared\Criteria;
+use Shared\Query\Pagination;
 
 /**
  * @template TKey of array-key
@@ -41,11 +42,15 @@ abstract readonly class AbstractObjectManager
     final protected function search(
         Criteria\AndX|Criteria\OrX|null $criteria = null,
         ?Criteria\OrderX $sort = null,
-        ?int $offset = null,
-        ?int $limit = null,
+        ?Pagination $pagination = null,
     ): array {
         try {
-            $criteria = DoctrineCriteriaConverter::convert($criteria, $sort, $offset, $limit);
+            $criteria = DoctrineCriteriaConverter::convert(
+                $criteria,
+                $sort,
+                $pagination?->offset,
+                $pagination?->limit,
+            );
 
             return $this->repository
                 ->matching($criteria)
